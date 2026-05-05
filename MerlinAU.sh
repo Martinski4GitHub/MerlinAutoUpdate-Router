@@ -4,7 +4,7 @@
 #
 # Original Creation Date: 2023-Oct-01 by @ExtremeFiretop.
 # Official Co-Author: @Martinski W. - Date: 2023-Nov-01
-# Last Modified: 2026-Apr-27
+# Last Modified: 2026-May-06
 ###################################################################
 set -u
 
@@ -3289,9 +3289,9 @@ _GetLatestFWUpdateVersionFromRouter_()
    echo "$newVersionStr" ; return "$retCode"
 }
 
-##-------------------------------------##
-## Added by Martinski W. [2026-Apr-06] ##
-##-------------------------------------##
+##------------------------------------------##
+## Modified by ExtremeFiretop [2026-May-05] ##
+##------------------------------------------##
 _Check_PostReboot_FWUpdate_Setup_()
 {
    local fwInstalledVersion  savedInstalledVersion  savedNewUpdateVersion
@@ -3322,6 +3322,7 @@ _Check_PostReboot_FWUpdate_Setup_()
        Say "Flashing of new F/W Update version ${fwInstalledVersion} for the ${MODEL_ID} router was successful."
        Update_Custom_Settings FW_New_Update_Notification_Vers TBD
        Update_Custom_Settings FW_New_Update_Expected_Run_Date TBD
+       Update_Custom_Settings FW_New_Update_Notification_Date TBD
    fi
    rm -f "$saveEMailInfoMsg"
 
