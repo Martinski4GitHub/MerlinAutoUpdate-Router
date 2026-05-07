@@ -4,16 +4,16 @@
 #
 # Original Creation Date: 2023-Oct-01 by @ExtremeFiretop.
 # Official Co-Author: @Martinski W. - Date: 2023-Nov-01
-# Last Modified: 2026-Apr-08
+# Last Modified: 2026-May-06
 ###################################################################
 set -u
 
 ## Set version for each Production Release ##
-readonly SCRIPT_VERSION=1.6.1
-readonly SCRIPT_VERSTAG="26040823"
+readonly SCRIPT_VERSION=1.6.2
+readonly SCRIPT_VERSTAG="26050619"
 readonly SCRIPT_NAME="MerlinAU"
 ## Set to "master" for Production Releases ##
-SCRIPT_BRANCH="master"
+SCRIPT_BRANCH="dev"
 
 ##----------------------------------------##
 ## Modified by Martinski W. [2024-Jul-03] ##
@@ -1028,7 +1028,7 @@ else
     ## Set 20 minutes AFTER for APs and AiMesh Nodes ##
     readonly FW_Update_CRON_DefaultSchedule="20 0 * * *"
 fi
-readonly meshUpdate_WaitSecs=8
+readonly meshUpdate_WaitSecs=6
 
 ## Recommended 15 minutes BEFORE the F/W Update ##
 readonly ScriptAU_CRON_DefaultSchedule="45 23 * * *"
@@ -5390,7 +5390,7 @@ _GetLatestFWUpdateVersionFromNode_()
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2024-Jun-05] ##
+## Modified by Martinski W. [2026-May-06] ##
 ##----------------------------------------##
 _GetLatestFWUpdateVersionFromWebsite_()
 {
@@ -5418,6 +5418,11 @@ _GetLatestFWUpdateVersionFromWebsite_()
 
     if [ -z "$versionStr" ] || [ -z "$correct_link" ]
     then echo "**ERROR** **NO_URL**" ; return 1
+    fi
+
+    ## Make sure "386.xx" versions have '3004.' prefix ##
+    if echo "$versionStr" | grep -qE '^386[.][0-9]+'
+    then versionStr="3004.$versionStr"
     fi
 
     echo "$versionStr"
@@ -6669,7 +6674,7 @@ _Calculate_NextRunTime_()
         if [ -z "$fwNewUpdateNotificationDate" ] || \
            [ "$fwNewUpdateNotificationDate" = "TBD" ]
         then
-            fwNewUpdateNotificationDate="$(date +%Y-%m-%d_%H:%M:%S)"
+            fwNewUpdateNotificationDate="$(date +"$FW_UpdateNotificationDateFormat")"
         fi
 
         upfwDateTimeSecs="$(_Calculate_DST_ "$(echo "$fwNewUpdateNotificationDate" | sed 's/_/ /g')")"
@@ -8299,9 +8304,9 @@ _ManageChangelogGnuton_()
     return 0
 }
 
-##------------------------------------------##
-## Modified by ExtremeFiretop [2025-Apr-11] ##
-##------------------------------------------##
+##----------------------------------------##
+## Modified by Martinski W. [2026-May-06] ##
+##----------------------------------------##
 _CheckNewUpdateFirmwareNotification_()
 {
    if [ $# -lt 2 ] || [ -z "$1" ] || [ -z "$2" ]
@@ -8334,6 +8339,8 @@ _CheckNewUpdateFirmwareNotification_()
    then
        fwNewUpdateNotificationVers="$releaseVersionStr"
        Update_Custom_Settings FW_New_Update_Notification_Vers "$fwNewUpdateNotificationVers"
+       # Reset for newer F/W version updates #
+       Update_Custom_Settings FW_New_Update_Notification_Date TBD
    else
        numOfFields="$(echo "$fwNewUpdateNotificationVers" | awk -F '.' '{print NF}')"
        fwNewUpdateVersNum="$(_FWVersionStrToNum_ "$fwNewUpdateNotificationVers" "$numOfFields")"
@@ -10624,7 +10631,7 @@ _ProcessMeshNodes_()
             wait
 
             # ---- Single wait ---- #
-            local waitSeconds="${meshUpdate_WaitSecs:-8}"
+            local waitSeconds="${meshUpdate_WaitSecs:-6}"
             if "$includeExtraLogic"
             then
                 local waitMsg="Please wait while we query the node(s) for status..."
