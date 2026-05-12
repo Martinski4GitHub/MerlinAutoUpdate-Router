@@ -232,7 +232,6 @@ input[type="submit"] {
 button:hover,
 input[type="button"]:hover,
 input[type="submit"]:hover {
-   transform: translateY(-1px);
    background: linear-gradient(135deg, #3b98ba 0%, #28728e 100%) !important;
    box-shadow: 0 8px 18px rgba(0,0,0,0.35);
 }
@@ -241,7 +240,6 @@ input[type="submit"]:hover {
 button:active,
 input[type="button"]:active,
 input[type="submit"]:active {
-   transform: translateY(0);
    box-shadow: 0 3px 8px rgba(0,0,0,0.30);
 }
 
@@ -338,6 +336,27 @@ const scriptUpdateGateMaxTries = 12;
 
 const validationErrorMsg = 'Validation failed. Please correct invalid value and try again.';
 
+function FocusInvalidFieldAfterAlert(formField)
+{
+   if (formField === null || typeof formField === 'undefined')
+   { return; }
+
+   setTimeout(function()
+   {
+      try
+      {
+         formField.focus();
+
+         if (typeof formField.select === 'function')
+         { formField.select(); }
+      }
+      catch (error)
+      {
+         ConsoleLogDEBUG('Unable to focus invalid field:', error);
+      }
+   }, 0);
+}
+
 /**-------------------------------------**/
 /** Added by Martinski W. [2025-Feb-21] **/
 /**-------------------------------------**/
@@ -400,6 +419,9 @@ const fwPostponedDays =
 /**-------------------------------------**/
 function ValidatePostponedDays (formField)
 {
+   if (formField === null || typeof formField === 'undefined')
+   { return false; }
+
    if (fwPostponedDays.ValidateNumber(formField))
    {
        $(formField).removeClass('Invalid');
@@ -408,8 +430,8 @@ function ValidatePostponedDays (formField)
    }
    else
    {
-       formField.focus();
        $(formField).addClass('Invalid');
+       $(formField).off('mouseover');
        $(formField).on('mouseover',function(){return overlib(fwPostponedDays.ErrorMsg(),0,0);});
        $(formField)[0].onmouseout = nd;
        return false;
@@ -598,6 +620,9 @@ function RunScriptUpdateFirmwareGateCheck()
 /**-------------------------------------**/
 function ValidateFWUpdateTime (formField, timeInput)
 {
+   if (formField === null || typeof formField === 'undefined')
+   { return false; }
+
    if (fwScheduleTime.ValidateTime (formField, timeInput))
    {
        $(formField).removeClass('Invalid');
@@ -606,8 +631,8 @@ function ValidateFWUpdateTime (formField, timeInput)
    }
    else
    {
-       formField.focus();
        $(formField).addClass('Invalid');
+       $(formField).off('mouseover');
        $(formField).on('mouseover',function(){return overlib(fwScheduleTime.ErrorMsg(timeInput),0,0);});
        $(formField)[0].onmouseout = nd;
        return false;
@@ -619,6 +644,9 @@ function ValidateFWUpdateTime (formField, timeInput)
 /**-------------------------------------**/
 function ValidateFWUpdateXDays (formField, timeInput)
 {
+   if (formField === null || typeof formField === 'undefined')
+   { return false; }
+
    if (fwScheduleTime.ValidateTime (formField, timeInput))
    {
        $(formField).removeClass('Invalid');
@@ -627,8 +655,8 @@ function ValidateFWUpdateXDays (formField, timeInput)
    }
    else
    {
-       formField.focus();
        $(formField).addClass('Invalid');
+       $(formField).off('mouseover');
        $(formField).on('mouseover',function(){return overlib(fwScheduleTime.ErrorMsg(timeInput),0,0);});
        $(formField)[0].onmouseout = nd;
        return false;
@@ -1322,7 +1350,8 @@ function ToggleChangelogApproval (checkboxElem)
 /**----------------------------------------**/
 function ValidateDirectoryPath (formField, dirType)
 {
-   if (formField === null) { return false; }
+   if (formField === null || typeof formField === 'undefined')
+   { return false; }
 
    if (fwUpdateDirPath.ValidatePath(formField, dirType))
    {
@@ -1332,8 +1361,8 @@ function ValidateDirectoryPath (formField, dirType)
    }
    else
    {
-      formField.focus();
       $(formField).addClass('Invalid');
+      $(formField).off('mouseover');
       $(formField).on('mouseover',function(){return overlib(fwUpdateDirPath.ErrorMsg(dirType),0,0);});
       $(formField)[0].onmouseout = nd;
       return false;
@@ -2594,29 +2623,42 @@ function SaveCombinedConfig()
     if (!ValidatePasswordString(passwordElem, 'onSAVE'))
     {
         alert(`${validationErrorMsg}\n\n` + loginPassword.ErrorMsg());
+        FocusInvalidFieldAfterAlert(passwordElem);
         return false;
     }
-    if (!ValidatePostponedDays(document.form.fwUpdatePostponement))
+
+    let fwUpdatePostponement = document.form.fwUpdatePostponement;
+    if (!ValidatePostponedDays(fwUpdatePostponement))
     {
         alert(`${validationErrorMsg}\n\n` + fwPostponedDays.ErrorMsg());
+        FocusInvalidFieldAfterAlert(fwUpdatePostponement);
         return false;
     }
-    if (document.form.fwScheduleHOUR.disabled === false &&
-        !ValidateFWUpdateTime(document.form.fwScheduleHOUR, 'HOUR'))
+
+    let fwScheduleHOUR = document.form.fwScheduleHOUR;
+    if (fwScheduleHOUR.disabled === false &&
+        !ValidateFWUpdateTime(fwScheduleHOUR, 'HOUR'))
     {
         alert(`${validationErrorMsg}\n\n` + fwScheduleTime.ErrorMsg('HOUR'));
+        FocusInvalidFieldAfterAlert(fwScheduleHOUR);
         return false;
     }
-    if (document.form.fwScheduleMINS.disabled === false &&
-        !ValidateFWUpdateTime(document.form.fwScheduleMINS, 'MINS'))
+
+    let fwScheduleMINS = document.form.fwScheduleMINS;
+    if (fwScheduleMINS.disabled === false &&
+        !ValidateFWUpdateTime(fwScheduleMINS, 'MINS'))
     {
         alert(`${validationErrorMsg}\n\n` + fwScheduleTime.ErrorMsg('MINS'));
+        FocusInvalidFieldAfterAlert(fwScheduleMINS);
         return false;
     }
+
+    let fwScheduleXDAYS = document.form.fwScheduleXDAYS;
     if (document.getElementById('fwSchedBoxDAYSX').checked &&
-        !ValidateFWUpdateXDays(document.form.fwScheduleXDAYS, 'DAYS'))
+        !ValidateFWUpdateXDays(fwScheduleXDAYS, 'DAYS'))
     {
         alert(`${validationErrorMsg}\n\n` + fwScheduleTime.ErrorMsg('DAYS'));
+        FocusInvalidFieldAfterAlert(fwScheduleXDAYS);
         return false;
     }
 
@@ -2668,6 +2710,7 @@ function SaveCombinedConfig()
         }
         else {
             alert(`${validationErrorMsg}\n\n` + fwUpdateDirPath.ErrorMsg('ZIP'));
+            FocusInvalidFieldAfterAlert(fwUpdateZIPdirectory);
             return false;
         }
     }
@@ -2681,6 +2724,7 @@ function SaveCombinedConfig()
         }
         else {
             alert(`${validationErrorMsg}\n\n` + fwUpdateDirPath.ErrorMsg('LOG'));
+            FocusInvalidFieldAfterAlert(fwUpdateLOGdirectory);
             return false;
         }
     }
