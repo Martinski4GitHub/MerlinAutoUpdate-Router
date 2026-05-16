@@ -4,13 +4,13 @@
 #
 # Original Creation Date: 2023-Oct-01 by @ExtremeFiretop.
 # Official Co-Author: @Martinski W. - Date: 2023-Nov-01
-# Last Modified: 2026-May-11
+# Last Modified: 2026-May-16
 ###################################################################
 set -u
 
 ## Set version for each Production Release ##
 readonly SCRIPT_VERSION=1.6.2
-readonly SCRIPT_VERSTAG="26051123"
+readonly SCRIPT_VERSTAG="26051600"
 readonly SCRIPT_NAME="MerlinAU"
 ## Set to "master" for Production Releases ##
 SCRIPT_BRANCH="dev"
