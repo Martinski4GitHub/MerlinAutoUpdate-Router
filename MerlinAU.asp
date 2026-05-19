@@ -286,7 +286,7 @@ input[value="Uninstall"] {
 <script language="JavaScript" type="text/javascript">
 
 /**----------------------------**/
-/** Last Modified: 2026-Apr-05 **/
+/** Last Modified: 2026-May-16 **/
 /**----------------------------**/
 
 // Separate variables for shared and AJAX settings //
@@ -338,23 +338,19 @@ const validationErrorMsg = 'Validation failed. Please correct invalid value and 
 
 function FocusInvalidFieldAfterAlert(formField)
 {
-   if (formField === null || typeof formField === 'undefined')
-   { return; }
+    if (formField === null || typeof formField === 'undefined')
+    { return; }
 
-   setTimeout(function()
-   {
-      try
-      {
-         formField.focus();
-
-         if (typeof formField.select === 'function')
-         { formField.select(); }
-      }
-      catch (error)
-      {
-         ConsoleLogDEBUG('Unable to focus invalid field:', error);
-      }
-   }, 0);
+    try
+    {
+        formField.focus();
+        if (typeof formField.select === 'function')
+        { formField.select(); }
+    }
+    catch (error)
+    {
+        ConsoleLogDEBUG('Unable to focus invalid field:', error);
+    }
 }
 
 /**-------------------------------------**/
@@ -1407,9 +1403,7 @@ function GetExternalCheckResults()
                 fwUpdateDirPath.extCheckZIPdirOK = false;
                 fwUpdateDirPath.extCheckZIPdirMSG = externalCheckMsg;
 
-                if (fwUpdateZIPdirectory !== null &&
-                    typeof fwUpdateZIPdirectory !== 'undefined' &&
-                    !ValidateDirectoryPath (fwUpdateZIPdirectory, 'ZIP'))
+                if (!ValidateDirectoryPath (fwUpdateZIPdirectory, 'ZIP'))
                 {
                     validationFailed = true;
                     validationStatus = fwUpdateDirPath.ErrorMsg('ZIP');
@@ -1420,9 +1414,7 @@ function GetExternalCheckResults()
                 fwUpdateDirPath.extCheckLOGdirOK = false;
                 fwUpdateDirPath.extCheckLOGdirMSG = externalCheckMsg;
 
-                if (fwUpdateLOGdirectory !== null &&
-                    typeof fwUpdateLOGdirectory !== 'undefined' &&
-                    !ValidateDirectoryPath (fwUpdateLOGdirectory, 'LOG'))
+                if (!ValidateDirectoryPath (fwUpdateLOGdirectory, 'LOG'))
                 {
                     validationFailed = true;
                     validationStatus = fwUpdateDirPath.ErrorMsg('LOG');
@@ -1447,7 +1439,7 @@ function GetExternalCheckResults()
 // To support 'routerPassword' element //
 const loginPassword =
 {
-   minLen: 5, maxLen: 64, pswdLen: 0, pswdStr: '',
+   minLen: 8, maxLen: 64, pswdLen: 0, pswdStr: '',
    pswdInvalid: false, pswdVerified: false, pswdUnverified: false,
    pswdFocus: false, allBlankCharsRegExp: '^[ ]+$',
 
@@ -1856,6 +1848,8 @@ let FWUpdateDirZIPHint = "This is the base directory path where the subdirectory
 
 const FWUpdateDirLOGHint = 'This is the base directory path where the subdirectory <br><b>MerlinAU.d/logs</b></br> will be located to store the log files of the firmware update process.';
 
+const FWUpdateScheduleHint = 'Option to configure the days and time when automatic F/W update checks will be run.'
+
 const betaToReleaseHint = 'Enabling this option allows the F/W update process to detect an installed Beta version and proceed to update to the latest production release version.';
 
 const allowVPNAccessHint = 'Enabling this option allows Tailscale and ZeroTier VPN services (if installed) to remain active during the firmware update process. This may be needed when doing a firmware update to a router while connected remotely via a VPN.';
@@ -1882,6 +1876,9 @@ function ShowHintMsg (formField)
            break;
        case 'FW_UPDATE_LOGDIR':
            theHintMsg = FWUpdateDirLOGHint;
+           break;
+       case 'FW_UPDATE_SCHED':
+           theHintMsg = FWUpdateScheduleHint;
            break;
        case 'ROG_BUILDTYPE':
            theHintMsg = ROG_BuildTypeMsg;
@@ -2691,77 +2688,84 @@ function SaveCombinedConfig()
     let secondaryEmail = document.getElementById('secondaryEmail');
     let emailNotificationsEnabled = document.getElementById('emailNotificationsEnabled');
 
-    if (emailNotificationsEnabled && !emailNotificationsEnabled.disabled) {
+    if (emailNotificationsEnabled && !emailNotificationsEnabled.disabled)
+    {
         advanced_settings.FW_New_Update_EMail_Notification = emailNotificationsEnabled.checked ? 'ENABLED' : 'DISABLED';
     }
-    if (emailFormat && !emailFormat.disabled) {
+    if (emailFormat && !emailFormat.disabled)
+    {
         advanced_settings.FW_New_Update_EMail_FormatType = emailFormat.value || 'HTML';
     }
-    if (secondaryEmail && !secondaryEmail.disabled) {
+    if (secondaryEmail && !secondaryEmail.disabled)
+    {
         advanced_settings.FW_New_Update_EMail_CC_Address = secondaryEmail.value || 'TBD';
     }
 
     // F/W Update ZIP Directory //
     let fwUpdateZIPdirectory = document.getElementById('fwUpdateZIPDirectory');
-    if (fwUpdateZIPdirectory !== null && typeof fwUpdateZIPdirectory !== 'undefined')
+    if (ValidateDirectoryPath(fwUpdateZIPdirectory, 'ZIP'))
     {
-        if (ValidateDirectoryPath(fwUpdateZIPdirectory, 'ZIP')) {
-            advanced_settings.FW_New_Update_ZIP_Directory_Path = fwUpdateZIPdirectory.value;
-        }
-        else {
-            alert(`${validationErrorMsg}\n\n` + fwUpdateDirPath.ErrorMsg('ZIP'));
-            FocusInvalidFieldAfterAlert(fwUpdateZIPdirectory);
-            return false;
-        }
+        advanced_settings.FW_New_Update_ZIP_Directory_Path = fwUpdateZIPdirectory.value;
+    }
+    else
+    {
+        alert(`${validationErrorMsg}\n\n` + fwUpdateDirPath.ErrorMsg('ZIP'));
+        FocusInvalidFieldAfterAlert(fwUpdateZIPdirectory);
+        return false;
     }
 
     // F/W Update LOG Directory //
     let fwUpdateLOGdirectory = document.getElementById('fwUpdateLOGDirectory');
-    if (fwUpdateLOGdirectory !== null && typeof fwUpdateLOGdirectory !== 'undefined')
+    if (ValidateDirectoryPath(fwUpdateLOGdirectory, 'LOG'))
     {
-        if (ValidateDirectoryPath(fwUpdateLOGdirectory, 'LOG')) {
-            advanced_settings.FW_New_Update_LOG_Directory_Path = fwUpdateLOGdirectory.value;
-        }
-        else {
-            alert(`${validationErrorMsg}\n\n` + fwUpdateDirPath.ErrorMsg('LOG'));
-            FocusInvalidFieldAfterAlert(fwUpdateLOGdirectory);
-            return false;
-        }
+        advanced_settings.FW_New_Update_LOG_Directory_Path = fwUpdateLOGdirectory.value;
+    }
+    else
+    {
+        alert(`${validationErrorMsg}\n\n` + fwUpdateDirPath.ErrorMsg('LOG'));
+        FocusInvalidFieldAfterAlert(fwUpdateLOGdirectory);
+        return false;
     }
 
     // Tailscale/ZeroTier VPN Access //
     let tailscaleVPNEnabled = document.getElementById('tailscaleVPNEnabled');
-    if (tailscaleVPNEnabled && !tailscaleVPNEnabled.disabled) {
+    if (tailscaleVPNEnabled && !tailscaleVPNEnabled.disabled)
+    {
         advanced_settings.Allow_Updates_OverVPN = tailscaleVPNEnabled.checked ? 'ENABLED' : 'DISABLED';
     }
 
     // Automatic Script Updates //
     let script_AutoUpdate_Check = document.getElementById('Script_AutoUpdate_Check');
-    if (script_AutoUpdate_Check && !script_AutoUpdate_Check.disabled) {
+    if (script_AutoUpdate_Check && !script_AutoUpdate_Check.disabled)
+    {
         advanced_settings.Allow_Script_Auto_Update = script_AutoUpdate_Check.checked ? 'ENABLED' : 'DISABLED';
     }
 
     // Beta-to-Release Updates //
     let betaToReleaseUpdatesEnabled = document.getElementById('betaToReleaseUpdatesEnabled');
-    if (betaToReleaseUpdatesEnabled && !betaToReleaseUpdatesEnabled.disabled) {
+    if (betaToReleaseUpdatesEnabled && !betaToReleaseUpdatesEnabled.disabled)
+    {
         advanced_settings.FW_Allow_Beta_Production_Up = betaToReleaseUpdatesEnabled.checked ? 'ENABLED' : 'DISABLED';
     }
 
     // Automatic Backups //
     let autobackupEnabled = document.getElementById('autobackupEnabled');
-    if (autobackupEnabled && !autobackupEnabled.disabled) {
+    if (autobackupEnabled && !autobackupEnabled.disabled)
+    {
         advanced_settings.FW_Auto_Backupmon = autobackupEnabled.checked ? 'ENABLED' : 'DISABLED';
     }
 
     // ROG/TUF F/W Build Types (if rows are visible) //
     let rogFWBuildRow = document.getElementById('rogFWBuildRow');
     let rogFWBuildType = document.getElementById('rogFWBuildType');
-    if (rogFWBuildRow && rogFWBuildRow.style.display !== 'none' && rogFWBuildType) {
+    if (rogFWBuildRow && rogFWBuildRow.style.display !== 'none' && rogFWBuildType)
+    {
         advanced_settings.ROGBuild = (rogFWBuildType.value === 'ROG') ? 'ENABLED' : 'DISABLED';
     }
     let tufFWBuildRow = document.getElementById('tuffFWBuildRow');
     let tuffFWBuildType = document.getElementById('tuffFWBuildType');
-    if (tufFWBuildRow && tufFWBuildRow.style.display !== 'none' && tuffFWBuildType) {
+    if (tufFWBuildRow && tufFWBuildRow.style.display !== 'none' && tuffFWBuildType)
+    {
         advanced_settings.TUFBuild = (tuffFWBuildType.value === 'TUF') ? 'ENABLED' : 'DISABLED';
     }
 
@@ -2852,7 +2856,7 @@ function UpdateMerlinAUScript()
         confirmText = "CHECK AND PROMPT:\n" +
                       "Check for a newer version of MerlinAU and prompt if found. " +
                       (autoUpdatesEnabled
-                          ? "It DOES install automatically!"
+                          ? "It DOES install update automatically!"
                           : "It does NOT install update automatically!") +
                       "\n\nContinue?";
     }
@@ -2936,9 +2940,9 @@ function IsFWPostponementExpired(postponedDays)
    return (notifyDate.getTime() <= Date.now());
 }
 
-/**----------------------------------------**/
+/**------------------------------------------**/
 /** Modified by ExtremeFiretop [2026-Apr-27] **/
-/**----------------------------------------**/
+/**------------------------------------------**/
 function CheckFirmwareUpdate()
 {
    console.log("Initiating F/W Update Check...");
@@ -2995,9 +2999,8 @@ function CheckFirmwareUpdate()
        {
            if (!confirm(
                "NOTE:\n" +
-               "A firmware update may flash NOW!\n" +
-               "This means logging you out of the WebUI and rebooting " +
-               "the router.\n\n" +
+               "This update check may start the firmware flash NOW!\n\n" +
+               "This means logging you out of the WebUI automatically and rebooting the router.\n\n" +
                "Continue to check for firmware updates now?"
            ))
            { return; }
@@ -3006,9 +3009,9 @@ function CheckFirmwareUpdate()
        {
            if (!confirm(
                "NOTE:\n" +
-               "This check will respect your configured postponement days.\n" +
-               "If a firmware update is found or already known, it should " +
-               "remain postponed until the postponement period has passed.\n\n" +
+               "This update check will respect your configured postponement setting. " +
+               "If a firmware update is found or already detected, it will not " +
+               "be flashed until the postponement period has expired.\n\n" +
                "Continue to check for firmware updates now?"
            ))
            { return; }
@@ -3020,9 +3023,8 @@ function CheckFirmwareUpdate()
 
        if (!confirm(
            "NOTE:\n" +
-           "Bypassing postponed days means the firmware may flash NOW!\n" +
-           "This means logging you out of the WebUI and rebooting " +
-           "the router.\n\n" +
+           "Bypassing postponed days may start the firmware update flash NOW!\n\n" +
+           "This means logging you out of the WebUI automatically and rebooting the router.\n\n" +
            "Continue to check for firmware updates now?"
        ))
        { return; }
@@ -3504,8 +3506,10 @@ function initializeCollapsibleSections()
 <!--** F/W Update Check Cron Schedule **-->
 <tr>
   <td style="text-align: left;">
-    <label id="fwUpdateCheckScheduleLabel" for="fwUpdateCheckSchedule">
-      Schedule for F/W Update Checks
+    <label for="fwScheduleXDAYS">
+      <a class="hintstyle" name="FW_UPDATE_SCHED" href="javascript:void(0);" onclick="ShowHintMsg(this);">
+        Schedule for F/W Update Checks
+      </a>
     </label>
   </td>
   <td>
