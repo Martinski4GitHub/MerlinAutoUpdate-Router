@@ -4,16 +4,16 @@
 #
 # Original Creation Date: 2023-Oct-01 by @ExtremeFiretop.
 # Official Co-Author: @Martinski W. - Date: 2023-Nov-01
-# Last Modified: 2026-Apr-08
+# Last Modified: 2026-May-16
 ###################################################################
 set -u
 
 ## Set version for each Production Release ##
-readonly SCRIPT_VERSION=1.6.1
-readonly SCRIPT_VERSTAG="26040823"
+readonly SCRIPT_VERSION=1.6.2
+readonly SCRIPT_VERSTAG="26051600"
 readonly SCRIPT_NAME="MerlinAU"
 ## Set to "master" for Production Releases ##
-SCRIPT_BRANCH="master"
+SCRIPT_BRANCH="dev"
 
 ##----------------------------------------##
 ## Modified by Martinski W. [2024-Jul-03] ##
@@ -280,6 +280,7 @@ routerLoginFailureMsg="Please try the following:
 if [ -t 0 ] && ! tty | grep -qwi "NOT"
 then
    isInteractive=true ; isVerbose=true
+   readonly gSavedSTTY="$(stty -g)"
 fi
 
 ##----------------------------------------##
@@ -617,6 +618,7 @@ _DoExit_()
    [ $# -gt 0 ] && [ -n "$1" ] && exitCode="$1"
    _ReleaseLock_
    _ReleaseMutexFLock_ checkLockOK
+   _IgnoreKeypresses_ OFF
    exit "$exitCode"
 }
 
@@ -1028,7 +1030,7 @@ else
     ## Set 20 minutes AFTER for APs and AiMesh Nodes ##
     readonly FW_Update_CRON_DefaultSchedule="20 0 * * *"
 fi
-readonly meshUpdate_WaitSecs=8
+readonly meshUpdate_WaitSecs=6
 
 ## Recommended 15 minutes BEFORE the F/W Update ##
 readonly ScriptAU_CRON_DefaultSchedule="45 23 * * *"
@@ -4498,16 +4500,55 @@ _TestLoginCredentials_()
     return "$retCode"
 }
 
+##-------------------------------------##
+## Added by Martinski W. [2026-May-11] ##
+##-------------------------------------##
+_ConsumeKeypressBuffer_()
+{
+   if [ -z "${gSavedSTTY:+xSETOKx}" ]
+   then return 1
+   fi
+   local savedSettings
+   local keyPress=''  prevTimeSec
+   savedSettings="$(stty -g)"
+   prevTimeSec="$(date +%s)"
+   read -rs -n1000 -t 1 keyPress < "$(tty 0>&2)"
+   while [ "$(date +%s)" -lt "$((prevTimeSec + 1))" ]
+   do
+      stty -echo -icanon min 0 time 1
+      cat - > /dev/null
+   done
+   stty "$savedSettings"
+}
+
+##-------------------------------------##
+## Added by Martinski W. [2026-May-11] ##
+##-------------------------------------##
+_IgnoreKeypresses_()
+{
+   if [ $# -eq 0 ] || [ -z "$1" ] || \
+      [ -z "${gSavedSTTY:+xSETOKx}" ]
+   then return 1
+   fi
+   case "$1" in
+        ON) stty -echo ;;
+       OFF) stty "$gSavedSTTY" ; stty echo ;;
+   esac
+}
+
 ##----------------------------------------##
-## Modified by Martinski W. [2024-Jul-30] ##
+## Modified by Martinski W. [2026-May-11] ##
 ##----------------------------------------##
 _GetRawKeypress_() 
 {
-   local savedSettings
-   savedSettings="$(stty -g)"
-   stty -echo raw
-   echo "$(dd count=1 2>/dev/null)"
+   if [ -n "${gSavedSTTY:+xSETOKx}" ]
+   then stty "$gSavedSTTY" ; stty echo
+   fi
+   local savedSettings="$(stty -g)"
+   stty -icanon -echo
+   dd bs=4 count=1 2>/dev/null
    stty "$savedSettings"
+   stty -echo
 }
 
 ##-------------------------------------##
@@ -4579,14 +4620,16 @@ _SetReloadKeySeqHandler_()
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Jan-10] ##
+## Modified by Martinski W. [2026-May-11] ##
 ##----------------------------------------##
 _GetKeypressInput_()
 {
-   local inputStrLenMAX=16  inputString  promptStr
-   local charNum  inputStrLen  keypressCount
+   local inputStrLenMAX=8  promptStr  numOfChars
+   local previousStr  prevxStrLen  keypressCnt
+   local charNum  inputStrLen  inputString
    local theKeySeqCnt theKeySeqNum  retCode
-   local offlineUpdKeyFlag  execReloadKeyFlag 
+   local offlineUpdKeyFlag  execReloadKeyFlag
+   local specialKeyCharCodes="12 16 18 24 25 27"
 
    if [ -n "${offlineUpdTrigger:+xSETx}" ]
    then
@@ -4618,40 +4661,51 @@ _GetKeypressInput_()
    _ClearKeySeqState_()
    { theKeySeqNum=0 ; theKeySeqCnt=0 ; }
 
+   retCode=1
    charNum=""
    promptStr="$1"
    inputString=""
    inputStrLen=0
-   keypressCount=0
+   keypressCnt=0
+   prevxStrLen=0
    _ClearKeySeqState_
    _ShowInputString_
 
-   local savedIFS="$IFS"
-   while IFS='' theChar="$(_GetRawKeypress_)"
+   while true
    do
+      theChar="$(_GetRawKeypress_)"
       charNum="$(printf "%d" "'$theChar")"
+      keypressCnt="$((keypressCnt + 1))"
 
-      if [ "$charNum" -eq 0 ] || [ "$charNum" -eq 10 ] || [ "$charNum" -eq 13 ]
+      ##<ENTER>##
+      if echo "$charNum" | grep -qE "^(0|10|13)$"
       then
           if [ "$inputStrLen" -gt 0 ]
-          then retCode=0 ; else retCode=1 ; fi
+          then retCode=0
+          else retCode=1
+          fi
+          keypressCnt=0
           break
       fi
 
-      ## BACKSPACE keypress ##
-      if [ "$charNum" -eq 8 ] || [ "$charNum" -eq 127 ]
+      ##<BACKSPACE>##
+      if echo "$charNum" | grep -qE "^(8|127)$"
       then
+          if [ "$keypressCnt" -gt 0 ]
+          then keypressCnt="$((keypressCnt - 1))"
+          fi
           if [ "$inputStrLen" -gt 0 ]
           then
               inputString="${inputString%?}"
               inputStrLen="${#inputString}"
+              keypressCnt="$inputStrLen"
               _ShowInputString_
           fi
           _ClearKeySeqState_
           continue
       fi
 
-      ## BACKSPACE ALL keypress ##
+      ##<BACKSPACE ALL>##
       if [ "$charNum" -eq 21 ]
       then
           if [ "$inputStrLen" -gt 0 ]
@@ -4660,6 +4714,7 @@ _GetKeypressInput_()
               inputStrLen=0
               _ShowInputString_
           fi
+          keypressCnt=0
           _ClearKeySeqState_
           continue
       fi
@@ -4667,11 +4722,26 @@ _GetKeypressInput_()
       ## ONLY 7-bit ASCII printable characters are VALID ##
       if [ "$charNum" -gt 31 ] && [ "$charNum" -lt 127 ]
       then
-          if [ "$inputStrLen" -le "$inputStrLenMAX" ]
+          prevxStrLen="$inputStrLen"
+          previousStr="$inputString"
+          if [ "$inputStrLen" -lt "$inputStrLenMAX" ]
           then
               inputString="${inputString}${theChar}"
               inputStrLen="${#inputString}"
+          else
+              if [ "$keypressCnt" -gt 0 ]
+              then keypressCnt="$((keypressCnt - 1))"
+              fi
           fi
+
+          # Make sure to remove extraneous chars #
+          if [ "$inputStrLen" -gt "$keypressCnt" ] && \
+             [ "$inputStrLen" -gt "$((prevxStrLen + 1))" ]
+          then  ## Keep previous input string ##
+              inputString="$previousStr"
+              inputStrLen="${#inputString}"
+          fi
+          keypressCnt="$inputStrLen"
           _ShowInputString_
           _ClearKeySeqState_
           continue
@@ -4681,6 +4751,19 @@ _GetKeypressInput_()
       if [ "$charNum" -gt 0 ] && [ "$charNum" -lt 32 ] && \
          { "$offlineUpdKeyFlag" || "$execReloadKeyFlag" ; }
       then
+          if [ "$keypressCnt" -gt 0 ]
+          then keypressCnt="$((keypressCnt - 1))"
+          fi
+          numOfChars="$(printf "$theChar" | wc -m)"
+          if [ "$numOfChars" -gt 1 ] || \
+             ! echo "$specialKeyCharCodes" | grep -qw "$charNum"
+          then  ##IGNORE##
+              _ShowInputString_
+              _ClearKeySeqState_
+              _ConsumeKeypressBuffer_
+              continue
+          fi
+
           "$offlineUpdKeyFlag" && offlineUpdTrigger=false
           "$execReloadKeyFlag" && execReloadTrigger=false
 
@@ -4689,44 +4772,60 @@ _GetKeypressInput_()
           then theKeySeqNum="$charNum"
           else theKeySeqNum="${theKeySeqNum}${charNum}"
           fi
+
           if "$offlineUpdKeyFlag" && \
              _OfflineKeySeqHandler_ "$theKeySeqCnt" "$theKeySeqNum" FOUNDOK
           then
               _ClearKeySeqState_
               if [ "$inputString" = "offline" ]
-              then offlineUpdTrigger=true ; fi
+              then offlineUpdTrigger=true
+              fi
               continue
           fi
           if "$execReloadKeyFlag" && \
              _SetReloadKeySeqHandler_ "$theKeySeqCnt" "$theKeySeqNum" FOUNDOK
           then
               _ClearKeySeqState_
-              execReloadTrigger=true
+              if [ -z "$inputString" ]
+              then execReloadTrigger=true
+              fi
               continue
           fi
           if { "$offlineUpdKeyFlag" && \
                _OfflineKeySeqHandler_ "$theKeySeqCnt" "$theKeySeqNum" NOTFOUND ; } && \
              { "$execReloadKeyFlag" && \
                _SetReloadKeySeqHandler_ "$theKeySeqCnt" "$theKeySeqNum" NOTFOUND ; }
-          then _ClearKeySeqState_ ; fi
+          then
+              _ShowInputString_
+              _ClearKeySeqState_
+              _ConsumeKeypressBuffer_
+              continue
+          fi
       else
+          if [ "$keypressCnt" -gt 0 ]
+          then keypressCnt="$((keypressCnt - 1))"
+          fi
+          _ShowInputString_
           _ClearKeySeqState_
+          _ConsumeKeypressBuffer_
+          continue
       fi
    done
-   IFS="$savedIFS"
 
    theUserInputStr="$inputString"
+   _IgnoreKeypresses_ OFF
    echo ; return "$retCode"
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Mar-07] ##
+## Modified by Martinski W. [2026-May-11] ##
 ##----------------------------------------##
 _GetPasswordInput_()
 {
-   local PSWDstrLenMIN=5  PSWDstrLenMAX=64
+   local PSWDstrLenMIN=8  PSWDstrLenMAX=64
+   local previousStr  prevxStrLen  keypressCnt
    local newPSWDtmpStr  PSWDprompt  showPSWD
-   local retCode=1  charNum  newPSWDlength
+   local retCode  charNum  newPSWDlength
    # For more responsive TAB keypress debounce #
    local tabKeyDebounceSem="/tmp/var/tmp/${ScriptFNameTag}_TabKeySEM.txt"
 
@@ -4770,26 +4869,32 @@ _GetPasswordInput_()
       printf "\r\033[0K[Length=${LENct}%${LENwd}d${NOct}]: %s" "$newPSWDlength" "$pswdTemp"
    }
 
+   retCode=1
    charNum=""
    showPSWD=0
+   keypressCnt=0
+   prevxStrLen=0
    newPSWDstring="$thePWSDstring"
    newPSWDlength="${#newPSWDstring}"
    newPSWDtmpStr="$(_ShowAsterisks_ "$newPSWDlength")"
    echo ; _ShowPSWDPrompt_
 
-   local savedIFS="$IFS"
-   while IFS='' theChar="$(_GetRawKeypress_)"
+   while true
    do
+      theChar="$(_GetRawKeypress_)"
       charNum="$(printf "%d" "'$theChar")"
+      keypressCnt="$((keypressCnt + 1))"
 
-      if [ "$charNum" -eq 0 ] || [ "$charNum" -eq 10 ] || [ "$charNum" -eq 13 ]
+      ##<ENTER>##
+      if echo "$charNum" | grep -qE "^(0|10|13)$"
       then
           if echo "$newPSWDstring" | grep -qE "^[[:blank:]]+$"
           then
               newPSWDstring=""
               printf "\n\n${REDct}**ERROR**${NOct}: Password string cannot be all blank spaces.\n"
               retCode=1
-          elif [ "$newPSWDlength" -ge "$PSWDstrLenMIN" ] && [ "$newPSWDlength" -le "$PSWDstrLenMAX" ]
+          elif [ "$newPSWDlength" -ge "$PSWDstrLenMIN" ] && \
+               [ "$newPSWDlength" -le "$PSWDstrLenMAX" ]
           then
               echo
               retCode=0
@@ -4806,20 +4911,34 @@ _GetPasswordInput_()
               printf "[MAX=${GRNct}${PSWDstrLenMAX}${NOct}].\n"
               retCode=1
           fi
+          keypressCnt=0
           break
       fi
 
-      ## Keep same previous password string ##
+      ##<ESC>: cancel and keep previous password string ##
       if [ "$charNum" -eq 27 ] && [ -n "$thePWSDstring" ]
       then
-          retCode=0
-          newPSWDstring="$thePWSDstring"
-          break
+          if [ "$keypressCnt" -gt 0 ]
+          then keypressCnt="$((keypressCnt - 1))"
+          fi
+          if [ "$theChar" = $'\033' ]
+          then
+              retCode=0
+              newPSWDstring="$thePWSDstring"
+              break
+          fi
+
+          _ShowPSWDPrompt_
+          _ConsumeKeypressBuffer_
+          continue
       fi
 
-      ## TAB keypress as toggle with debounce ##
+      ##<TAB>: show/hide password with debounce##
       if [ "$charNum" -eq 9 ]
       then
+          if [ "$keypressCnt" -gt 0 ]
+          then keypressCnt="$((keypressCnt - 1))"
+          fi
           if [ ! -f "$tabKeyDebounceSem" ]
           then
               showPSWD="$((! showPSWD))"
@@ -4829,20 +4948,24 @@ _GetPasswordInput_()
           continue
       fi
 
-      ## BACKSPACE keypress ##
-      if [ "$charNum" -eq 8 ] || [ "$charNum" -eq 127 ]
+      ##<BACKSPACE>##
+      if echo "$charNum" | grep -qE "^(8|127)$"
       then
+          if [ "$keypressCnt" -gt 0 ]
+          then keypressCnt="$((keypressCnt - 1))"
+          fi
           if [ "$newPSWDlength" -gt 0 ]
           then
               newPSWDstring="${newPSWDstring%?}"
               newPSWDlength="${#newPSWDstring}"
+              keypressCnt="$newPSWDlength"
               newPSWDtmpStr="$(_ShowAsterisks_ "$newPSWDlength")"
               _ShowPSWDPrompt_
           fi
           continue
       fi
 
-      ## BACKSPACE ALL keypress ##
+      ##<BACKSPACE ALL>##
       if [ "$charNum" -eq 21 ]
       then
           if [ "$newPSWDlength" -gt 0 ]
@@ -4852,23 +4975,38 @@ _GetPasswordInput_()
               newPSWDtmpStr="$(_ShowAsterisks_ "$newPSWDlength")"
               _ShowPSWDPrompt_
           fi
+          keypressCnt=0
           continue
       fi
 
       ## ONLY 7-bit ASCII printable characters are VALID ##
       if [ "$charNum" -gt 31 ] && [ "$charNum" -lt 127 ]
       then
+          prevxStrLen="$newPSWDlength"
+          previousStr="$newPSWDstring"
           if [ "$newPSWDlength" -lt "$PSWDstrLenMAX" ]
           then
               newPSWDstring="${newPSWDstring}${theChar}"
               newPSWDlength="${#newPSWDstring}"
               newPSWDtmpStr="$(_ShowAsterisks_ "$newPSWDlength")"
+          else
+              if [ "$keypressCnt" -gt 0 ]
+              then keypressCnt="$((keypressCnt - 1))"
+              fi
           fi
+
+          # Make sure to remove extraneous chars #
+          if [ "$newPSWDlength" -gt "$keypressCnt" ] && \
+             [ "$newPSWDlength" -gt "$((prevxStrLen + 1))" ]
+          then  ## Keep previous input string ##
+              newPSWDstring="$previousStr"
+              newPSWDlength="${#newPSWDstring}"
+          fi
+          keypressCnt="$newPSWDlength"
           _ShowPSWDPrompt_
           continue
       fi
    done
-   IFS="$savedIFS"
 
    if [ "$retCode" -ne 0 ]
    then
@@ -4877,7 +5015,8 @@ _GetPasswordInput_()
    fi
 
    thePWSDstring="$newPSWDstring"
-   return
+   _IgnoreKeypresses_ OFF
+   return "$retCode"
 }
 
 ##----------------------------------------##
@@ -5390,7 +5529,7 @@ _GetLatestFWUpdateVersionFromNode_()
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2024-Jun-05] ##
+## Modified by Martinski W. [2026-May-06] ##
 ##----------------------------------------##
 _GetLatestFWUpdateVersionFromWebsite_()
 {
@@ -5418,6 +5557,11 @@ _GetLatestFWUpdateVersionFromWebsite_()
 
     if [ -z "$versionStr" ] || [ -z "$correct_link" ]
     then echo "**ERROR** **NO_URL**" ; return 1
+    fi
+
+    ## Make sure "386.xx" versions have '3004.' prefix ##
+    if echo "$versionStr" | grep -qE '^386[.][0-9]+'
+    then versionStr="3004.$versionStr"
     fi
 
     echo "$versionStr"
@@ -6669,7 +6813,7 @@ _Calculate_NextRunTime_()
         if [ -z "$fwNewUpdateNotificationDate" ] || \
            [ "$fwNewUpdateNotificationDate" = "TBD" ]
         then
-            fwNewUpdateNotificationDate="$(date +%Y-%m-%d_%H:%M:%S)"
+            fwNewUpdateNotificationDate="$(date +"$FW_UpdateNotificationDateFormat")"
         fi
 
         upfwDateTimeSecs="$(_Calculate_DST_ "$(echo "$fwNewUpdateNotificationDate" | sed 's/_/ /g')")"
@@ -8299,9 +8443,9 @@ _ManageChangelogGnuton_()
     return 0
 }
 
-##------------------------------------------##
-## Modified by ExtremeFiretop [2025-Apr-11] ##
-##------------------------------------------##
+##----------------------------------------##
+## Modified by Martinski W. [2026-May-06] ##
+##----------------------------------------##
 _CheckNewUpdateFirmwareNotification_()
 {
    if [ $# -lt 2 ] || [ -z "$1" ] || [ -z "$2" ]
@@ -8334,6 +8478,8 @@ _CheckNewUpdateFirmwareNotification_()
    then
        fwNewUpdateNotificationVers="$releaseVersionStr"
        Update_Custom_Settings FW_New_Update_Notification_Vers "$fwNewUpdateNotificationVers"
+       # Reset for newer F/W version updates #
+       Update_Custom_Settings FW_New_Update_Notification_Date TBD
    else
        numOfFields="$(echo "$fwNewUpdateNotificationVers" | awk -F '.' '{print NF}')"
        fwNewUpdateVersNum="$(_FWVersionStrToNum_ "$fwNewUpdateNotificationVers" "$numOfFields")"
@@ -9178,18 +9324,19 @@ _RunOfflineUpdateNow_()
 
     [ ! -s "$offlineConfigFile" ] && return 2
 
-    # Source the configuration file #
+    # Source configuration file #
     . "$offlineConfigFile"
 
     # Check required parameter #
     if [ -z "${FW_OFFLINE_UPDATE_IS_ALLOWED:+xSETx}" ] || \
        [ "$FW_OFFLINE_UPDATE_IS_ALLOWED" != "true" ]
-    then return 2 ; fi
+    then return 2
+    fi
 
     # Reset FW_OFFLINE_UPDATE_ACCEPT_RISK to false #
     if grep -q "^FW_OFFLINE_UPDATE_ACCEPT_RISK=" "$offlineConfigFile"
     then
-        sed -i "s/^FW_OFFLINE_UPDATE_ACCEPT_RISK=.*/FW_OFFLINE_UPDATE_ACCEPT_RISK=\"false\"/" "$offlineConfigFile"
+        sed -i "s/^FW_OFFLINE_UPDATE_ACCEPT_RISK=.*/FW_OFFLINE_UPDATE_ACCEPT_RISK=false/" "$offlineConfigFile"
     fi
 
     clear
@@ -9209,21 +9356,21 @@ _RunOfflineUpdateNow_()
         # Add or update the setting to true #
         if grep -q "^FW_OFFLINE_UPDATE_ACCEPT_RISK=" "$offlineConfigFile"
         then
-            sed -i "s/^FW_OFFLINE_UPDATE_ACCEPT_RISK=.*/FW_OFFLINE_UPDATE_ACCEPT_RISK=\"true\"/" "$offlineConfigFile"
+            sed -i "s/^FW_OFFLINE_UPDATE_ACCEPT_RISK=.*/FW_OFFLINE_UPDATE_ACCEPT_RISK=true/" "$offlineConfigFile"
         else
-            # Ensure the new setting is added on a new line
-            echo "" >> "$offlineConfigFile"
-            echo "FW_OFFLINE_UPDATE_ACCEPT_RISK=\"true\"" >> "$offlineConfigFile"
+            # Ensure the new setting is added on a new line #
+            echo >> "$offlineConfigFile"
+            echo "FW_OFFLINE_UPDATE_ACCEPT_RISK=true" >> "$offlineConfigFile"
         fi
     else
         # Add or update the setting to false #
         if grep -q "^FW_OFFLINE_UPDATE_ACCEPT_RISK=" "$offlineConfigFile"
         then
-            sed -i "s/^FW_OFFLINE_UPDATE_ACCEPT_RISK=.*/FW_OFFLINE_UPDATE_ACCEPT_RISK=\"false\"/" "$offlineConfigFile"
+            sed -i "s/^FW_OFFLINE_UPDATE_ACCEPT_RISK=.*/FW_OFFLINE_UPDATE_ACCEPT_RISK=false/" "$offlineConfigFile"
         else
             # Ensure the new setting is added on a new line #
-            echo "" >> "$offlineConfigFile"
-            echo "FW_OFFLINE_UPDATE_ACCEPT_RISK=\"false\"" >> "$offlineConfigFile"
+            echo >> "$offlineConfigFile"
+            echo "FW_OFFLINE_UPDATE_ACCEPT_RISK=false" >> "$offlineConfigFile"
         fi
         _ClearOfflineUpdateState_ "Offline update was aborted. Exiting.\n"
         return 1
@@ -10624,7 +10771,7 @@ _ProcessMeshNodes_()
             wait
 
             # ---- Single wait ---- #
-            local waitSeconds="${meshUpdate_WaitSecs:-8}"
+            local waitSeconds="${meshUpdate_WaitSecs:-6}"
             if "$includeExtraLogic"
             then
                 local waitMsg="Please wait while we query the node(s) for status..."

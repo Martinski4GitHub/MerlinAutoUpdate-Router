@@ -12,8 +12,267 @@
 <link rel="stylesheet" type="text/css" href="form_style.css" />
 <title>MerlinAU add-on for ASUSWRT-Merlin Firmware</title>
 <style>
-.SettingsTable .Invalid {background-color: red !important;}
-.SettingsTable .Disabled {background-color:#ccc;color:#888}
+/* Existing validation states */
+.SettingsTable .Invalid {
+   background-color: red !important;
+   color: #fff !important;
+}
+
+.SettingsTable .Disabled {
+   background-color:#ccc !important;
+   color: #888 !important;
+}
+
+/* MerlinAU modern UI overrides */
+.FormTitle {
+   border-radius: 0 18px 18px 18px !important;
+   overflow: hidden;
+   border: 1px solid rgba(255,255,255,0.12);
+   box-shadow: 0 18px 45px rgba(0,0,0,0.35);
+   background: linear-gradient(145deg, #3f4a4f 0%, #2f383d 100%) !important;
+}
+
+/* Main panel background */
+.FormTitle > tbody > tr > td {
+   background:
+      radial-gradient(circle at top left, rgba(70,145,180,0.18), transparent 35%),
+      linear-gradient(145deg, #465156 0%, #313b40 100%) !important;
+   padding: 18px !important;
+}
+
+.merlinDivider {
+   height: 2px;
+   margin: 10px 0;
+   background: rgba(255,255,255,0.12);
+   border-top: 1px solid rgba(0,0,0,0.35);
+   box-sizing: border-box;
+}
+
+/* Description area */
+.formfontdesc {
+   background: rgba(255,255,255,0.06);
+   border: 1px solid rgba(255,255,255,0.10);
+   border-radius: 12px;
+   padding: 12px 14px;
+   line-height: 1.5;
+}
+
+/* Section cards */
+.FormTable,
+.SettingsTable {
+   border-collapse: separate !important;
+   border-spacing: 0 !important;
+   border-radius: 14px;
+   overflow: hidden;
+   background: rgba(20,25,28,0.35) !important;
+   border: 1px solid rgba(255,255,255,0.10) !important;
+   box-shadow: 0 8px 22px rgba(0,0,0,0.22);
+   margin-bottom: 14px;
+}
+
+/* Section headers */
+.FormTable thead td,
+.SettingsTable thead td,
+.collapsible-jquery td {
+   background: linear-gradient(135deg, #24333a 0%, #1a252b 100%) !important;
+   color: #f4f8fb !important;
+   font-weight: bold;
+   letter-spacing: 0.2px;
+   padding: 10px 12px !important;
+   border-bottom: 1px solid rgba(255,255,255,0.10) !important;
+}
+
+/* Clickable/collapsible headers */
+.collapsible-jquery {
+   cursor: pointer;
+}
+
+.collapsible-jquery td:hover {
+   background: linear-gradient(135deg, #2d4651 0%, #20333c 100%) !important;
+}
+
+/* Table rows - reduced padding to avoid fixed-width ASUSWRT wrapping */
+.FormTable td,
+.SettingsTable td {
+   border-color: rgba(255,255,255,0.08) !important;
+   padding: 6px 8px !important;
+   box-sizing: border-box;
+}
+
+/* Row hover */
+.FormTable tbody tr:hover,
+.SettingsTable tbody tr:hover {
+   background: rgba(255,255,255,0.045) !important;
+}
+
+/* Keep left-side labels from wrapping */
+.FormTable td:first-child,
+.SettingsTable td:first-child {
+   white-space: nowrap;
+}
+
+/* Keep important status/value fields on one line */
+#fwVersionInstalled,
+#fwUpdateAvailable,
+#fwNotificationsDate,
+#firmwareProductModelID,
+#firmwareProductModel,
+#firmwareVariant,
+#changelogApprovalStatus,
+#fwUpdateCheckStatus,
+#changelogCheckStatus,
+#betaToReleaseStatus,
+#tailscaleVPNStatus,
+#automaticBackupsStatus,
+#scriptAutoUpdateStatus,
+#emailNotificationsStatus {
+   white-space: nowrap !important;
+}
+
+/* Inputs/selects */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+select,
+textarea {
+   border-radius: 9px !important;
+   border: 1px solid rgba(255,255,255,0.18) !important;
+   background: #20292e !important;
+   color: #f1f5f7 !important;
+   padding: 6px 8px !important;
+   box-shadow: inset 0 1px 4px rgba(0,0,0,0.35);
+   box-sizing: border-box;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+select:focus,
+textarea:focus {
+   outline: none;
+   border-color: #5fb3d1 !important;
+   box-shadow:
+      0 0 0 2px rgba(95,179,209,0.20),
+      inset 0 1px 4px rgba(0,0,0,0.35);
+}
+
+/* Fix narrow schedule number boxes */
+#fwScheduleHOUR,
+#fwScheduleMINS,
+#fwScheduleXDAYS,
+#fwUpdatePostponement {
+   width: 48px !important;
+   min-width: 48px !important;
+   height: 28px !important;
+   line-height: 20px !important;
+   padding: 3px 8px !important;
+   text-align: center;
+   box-sizing: border-box;
+   overflow: visible;
+}
+
+/* Slightly smaller box for "Every X days" */
+#fwScheduleXDAYS {
+   width: 42px !important;
+   min-width: 42px !important;
+   margin-left: 6px;
+   margin-right: 6px;
+}
+
+/* Better spacing for schedule checkbox labels */
+#fwSchedBoxDAYS1,
+#fwSchedBoxDAYSX,
+#fwSched_SUN,
+#fwSched_MON,
+#fwSched_TUE,
+#fwSched_WED,
+#fwSched_THU,
+#fwSched_FRI,
+#fwSched_SAT {
+   margin-left: 6px;
+   margin-right: 4px;
+   vertical-align: middle;
+}
+
+/* Keep schedule controls aligned */
+#fwScheduleHOUR,
+#fwScheduleMINS,
+#fwScheduleXDAYS {
+   margin-right: 6px;
+   vertical-align: middle;
+}
+
+/* Checkboxes */
+input[type="checkbox"] {
+   transform: scale(1.08);
+   cursor: pointer;
+}
+
+/* Buttons - modern look without breaking fixed ASUSWRT button widths */
+.button_gen,
+button,
+input[type="button"],
+input[type="submit"] {
+   border-radius: 999px !important;
+   border: 1px solid rgba(255,255,255,0.14) !important;
+   background: linear-gradient(135deg, #307f9d 0%, #1f5f78 100%) !important;
+   color: #fff !important;
+   font-weight: bold;
+   padding: 5px 10px !important;
+   cursor: pointer;
+   box-shadow: 0 5px 14px rgba(0,0,0,0.28);
+   transition: all 0.15s ease-in-out;
+   box-sizing: border-box;
+   white-space: nowrap;
+   overflow: hidden;
+   text-overflow: clip;
+}
+
+.button_gen:hover,
+button:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover {
+   background: linear-gradient(135deg, #3b98ba 0%, #28728e 100%) !important;
+   box-shadow: 0 8px 18px rgba(0,0,0,0.35);
+}
+
+.button_gen:active,
+button:active,
+input[type="button"]:active,
+input[type="submit"]:active {
+   box-shadow: 0 3px 8px rgba(0,0,0,0.30);
+}
+
+/* Action button spacing/fix for text getting clipped */
+#FW_Update_Check,
+#Latest_Changelog,
+#Script_Update_Check,
+#Uninstall_Script,
+input[value="F/W Update Check"],
+input[value="Latest Changelog"],
+input[value="Script Update Check"],
+input[value="Uninstall"] {
+   min-width: 160px !important;
+   max-width: none !important;
+}
+
+/* Status labels/badges */
+[id$="Status"],
+[id$="StatusText"],
+[id$="Available"] {
+   border-radius: 8px;
+}
+
+/* Changelog modal polish */
+#changelogModal {
+   backdrop-filter: blur(3px);
+}
+
+#changelogContent {
+   border-radius: 16px !important;
+   border: 1px solid rgba(255,255,255,0.20);
+   box-shadow: 0 22px 60px rgba(0,0,0,0.55);
+}
 </style>
 <!-- Native built-in JS files -->
 <script language="JavaScript" type="text/javascript" src="/js/jquery.js"></script>
@@ -27,7 +286,7 @@
 <script language="JavaScript" type="text/javascript">
 
 /**----------------------------**/
-/** Last Modified: 2026-Apr-05 **/
+/** Last Modified: 2026-May-16 **/
 /**----------------------------**/
 
 // Separate variables for shared and AJAX settings //
@@ -76,6 +335,23 @@ let scriptUpdateGateTries = 0;
 const scriptUpdateGateMaxTries = 12;
 
 const validationErrorMsg = 'Validation failed. Please correct invalid value and try again.';
+
+function FocusInvalidFieldAfterAlert(formField)
+{
+    if (formField === null || typeof formField === 'undefined')
+    { return; }
+
+    try
+    {
+        formField.focus();
+        if (typeof formField.select === 'function')
+        { formField.select(); }
+    }
+    catch (error)
+    {
+        ConsoleLogDEBUG('Unable to focus invalid field:', error);
+    }
+}
 
 /**-------------------------------------**/
 /** Added by Martinski W. [2025-Feb-21] **/
@@ -139,6 +415,9 @@ const fwPostponedDays =
 /**-------------------------------------**/
 function ValidatePostponedDays (formField)
 {
+   if (formField === null || typeof formField === 'undefined')
+   { return false; }
+
    if (fwPostponedDays.ValidateNumber(formField))
    {
        $(formField).removeClass('Invalid');
@@ -147,8 +426,8 @@ function ValidatePostponedDays (formField)
    }
    else
    {
-       formField.focus();
        $(formField).addClass('Invalid');
+       $(formField).off('mouseover');
        $(formField).on('mouseover',function(){return overlib(fwPostponedDays.ErrorMsg(),0,0);});
        $(formField)[0].onmouseout = nd;
        return false;
@@ -337,6 +616,9 @@ function RunScriptUpdateFirmwareGateCheck()
 /**-------------------------------------**/
 function ValidateFWUpdateTime (formField, timeInput)
 {
+   if (formField === null || typeof formField === 'undefined')
+   { return false; }
+
    if (fwScheduleTime.ValidateTime (formField, timeInput))
    {
        $(formField).removeClass('Invalid');
@@ -345,8 +627,8 @@ function ValidateFWUpdateTime (formField, timeInput)
    }
    else
    {
-       formField.focus();
        $(formField).addClass('Invalid');
+       $(formField).off('mouseover');
        $(formField).on('mouseover',function(){return overlib(fwScheduleTime.ErrorMsg(timeInput),0,0);});
        $(formField)[0].onmouseout = nd;
        return false;
@@ -358,6 +640,9 @@ function ValidateFWUpdateTime (formField, timeInput)
 /**-------------------------------------**/
 function ValidateFWUpdateXDays (formField, timeInput)
 {
+   if (formField === null || typeof formField === 'undefined')
+   { return false; }
+
    if (fwScheduleTime.ValidateTime (formField, timeInput))
    {
        $(formField).removeClass('Invalid');
@@ -366,8 +651,8 @@ function ValidateFWUpdateXDays (formField, timeInput)
    }
    else
    {
-       formField.focus();
        $(formField).addClass('Invalid');
+       $(formField).off('mouseover');
        $(formField).on('mouseover',function(){return overlib(fwScheduleTime.ErrorMsg(timeInput),0,0);});
        $(formField)[0].onmouseout = nd;
        return false;
@@ -1061,7 +1346,8 @@ function ToggleChangelogApproval (checkboxElem)
 /**----------------------------------------**/
 function ValidateDirectoryPath (formField, dirType)
 {
-   if (formField === null) { return false; }
+   if (formField === null || typeof formField === 'undefined')
+   { return false; }
 
    if (fwUpdateDirPath.ValidatePath(formField, dirType))
    {
@@ -1071,8 +1357,8 @@ function ValidateDirectoryPath (formField, dirType)
    }
    else
    {
-      formField.focus();
       $(formField).addClass('Invalid');
+      $(formField).off('mouseover');
       $(formField).on('mouseover',function(){return overlib(fwUpdateDirPath.ErrorMsg(dirType),0,0);});
       $(formField)[0].onmouseout = nd;
       return false;
@@ -1117,9 +1403,7 @@ function GetExternalCheckResults()
                 fwUpdateDirPath.extCheckZIPdirOK = false;
                 fwUpdateDirPath.extCheckZIPdirMSG = externalCheckMsg;
 
-                if (fwUpdateZIPdirectory !== null &&
-                    typeof fwUpdateZIPdirectory !== 'undefined' &&
-                    !ValidateDirectoryPath (fwUpdateZIPdirectory, 'ZIP'))
+                if (!ValidateDirectoryPath (fwUpdateZIPdirectory, 'ZIP'))
                 {
                     validationFailed = true;
                     validationStatus = fwUpdateDirPath.ErrorMsg('ZIP');
@@ -1130,9 +1414,7 @@ function GetExternalCheckResults()
                 fwUpdateDirPath.extCheckLOGdirOK = false;
                 fwUpdateDirPath.extCheckLOGdirMSG = externalCheckMsg;
 
-                if (fwUpdateLOGdirectory !== null &&
-                    typeof fwUpdateLOGdirectory !== 'undefined' &&
-                    !ValidateDirectoryPath (fwUpdateLOGdirectory, 'LOG'))
+                if (!ValidateDirectoryPath (fwUpdateLOGdirectory, 'LOG'))
                 {
                     validationFailed = true;
                     validationStatus = fwUpdateDirPath.ErrorMsg('LOG');
@@ -1157,7 +1439,7 @@ function GetExternalCheckResults()
 // To support 'routerPassword' element //
 const loginPassword =
 {
-   minLen: 5, maxLen: 64, pswdLen: 0, pswdStr: '',
+   minLen: 8, maxLen: 64, pswdLen: 0, pswdStr: '',
    pswdInvalid: false, pswdVerified: false, pswdUnverified: false,
    pswdFocus: false, allBlankCharsRegExp: '^[ ]+$',
 
@@ -1313,6 +1595,12 @@ function FWVersionStrToNum(verStr, usePrereleaseRank)
 
     let versionCore = numericMatch[0];
     let segments = versionCore.split('.');
+
+    // Merlin firmware versions should compare as 4-part versions.
+    // Example: 3006.102.8.alpha2 -> 3006.102.8.0.alpha2
+    while (segments.length < 4)
+    { segments.push('0'); }
+
     let versionNumStr = '';
 
     for (let index = 0; index < segments.length; index++)
@@ -1329,34 +1617,66 @@ function FWVersionStrToNum(verStr, usePrereleaseRank)
     if (isNaN(baseVersionNum))
     { return 0; }
 
-    // Default: numeric-only comparison //
-    if (usePrereleaseRank !== true)
-    { return (baseVersionNum * 100); }
+    let buildSuffixNum = 0;
+    let versionForBuild = versionText;
 
-    let lowerVersionText = versionText.toLowerCase();
-    let prereleaseRank = 99;   // release //
+    // Match shell behavior: do not treat alpha/beta/rc tag numbers
+    // as build suffix numbers.
+    versionForBuild = versionForBuild.replace(/[.][Aa]lpha.*/, '.0');
+    versionForBuild = versionForBuild.replace(/[.][Bb]eta.*/, '.0');
+    versionForBuild = versionForBuild.replace(/[.][Rr][Cc].*/, '.0');
 
-    let rcMatch = lowerVersionText.match(/rc(\d*)/);
-    let betaMatch = lowerVersionText.match(/beta(\d*)/);
-    let alphaMatch = lowerVersionText.match(/alpha(\d*)/);
+    versionForBuild = versionForBuild.replace(/[_-]?[Aa]lpha.*/, '');
+    versionForBuild = versionForBuild.replace(/[_-]?[Bb]eta.*/, '');
+    versionForBuild = versionForBuild.replace(/[_-]?[Rr][Cc].*/, '');
 
-    if (alphaMatch != null)
+    let buildSuffixMatch = versionForBuild.match(
+        /^\d+(?:\.\d+)*[^0-9.]+(\d+)(?:[_-][A-Za-z]+)?$/
+    );
+
+    if (buildSuffixMatch != null)
     {
-        let alphaNum = parseInt(alphaMatch[1] || '0', 10);
-        prereleaseRank = 20 + Math.min(alphaNum, 19);
-    }
-    else if (betaMatch != null)
-    {
-        let betaNum = parseInt(betaMatch[1] || '0', 10);
-        prereleaseRank = 50 + Math.min(betaNum, 19);
-    }
-    else if (rcMatch != null)
-    {
-        let rcNum = parseInt(rcMatch[1] || '0', 10);
-        prereleaseRank = 80 + Math.min(rcNum, 19);
+        buildSuffixNum = parseInt(buildSuffixMatch[1], 10);
+        if (isNaN(buildSuffixNum))
+        { buildSuffixNum = 0; }
+
+        // Keep suffix as a 2-digit tie-breaker field.
+        buildSuffixNum = Math.min(buildSuffixNum, 99);
     }
 
-    return ((baseVersionNum * 100) + prereleaseRank);
+    let prereleaseRank = 0;
+
+    if (usePrereleaseRank === true)
+    {
+        let lowerVersionText = versionText.toLowerCase();
+        prereleaseRank = 99;   // release //
+
+        let rcMatch = lowerVersionText.match(/rc(\d*)/);
+        let betaMatch = lowerVersionText.match(/beta(\d*)/);
+        let alphaMatch = lowerVersionText.match(/alpha(\d*)/);
+
+        if (alphaMatch != null)
+        {
+            let alphaNum = parseInt(alphaMatch[1] || '0', 10);
+            prereleaseRank = 20 + Math.min(alphaNum, 19);
+        }
+        else if (betaMatch != null)
+        {
+            let betaNum = parseInt(betaMatch[1] || '0', 10);
+            prereleaseRank = 50 + Math.min(betaNum, 19);
+        }
+        else if (rcMatch != null)
+        {
+            let rcNum = parseInt(rcMatch[1] || '0', 10);
+            prereleaseRank = 80 + Math.min(rcNum, 19);
+        }
+    }
+
+    return (
+        (baseVersionNum * 10000) +
+        (buildSuffixNum * 100) +
+        prereleaseRank
+    );
 }
 
 /**----------------------------------------**/
@@ -1528,6 +1848,8 @@ let FWUpdateDirZIPHint = "This is the base directory path where the subdirectory
 
 const FWUpdateDirLOGHint = 'This is the base directory path where the subdirectory <br><b>MerlinAU.d/logs</b></br> will be located to store the log files of the firmware update process.';
 
+const FWUpdateScheduleHint = 'Option to configure the days and time when automatic F/W update checks will be run.'
+
 const betaToReleaseHint = 'Enabling this option allows the F/W update process to detect an installed Beta version and proceed to update to the latest production release version.';
 
 const allowVPNAccessHint = 'Enabling this option allows Tailscale and ZeroTier VPN services (if installed) to remain active during the firmware update process. This may be needed when doing a firmware update to a router while connected remotely via a VPN.';
@@ -1554,6 +1876,9 @@ function ShowHintMsg (formField)
            break;
        case 'FW_UPDATE_LOGDIR':
            theHintMsg = FWUpdateDirLOGHint;
+           break;
+       case 'FW_UPDATE_SCHED':
+           theHintMsg = FWUpdateScheduleHint;
            break;
        case 'ROG_BUILDTYPE':
            theHintMsg = ROG_BuildTypeMsg;
@@ -2295,29 +2620,42 @@ function SaveCombinedConfig()
     if (!ValidatePasswordString(passwordElem, 'onSAVE'))
     {
         alert(`${validationErrorMsg}\n\n` + loginPassword.ErrorMsg());
+        FocusInvalidFieldAfterAlert(passwordElem);
         return false;
     }
-    if (!ValidatePostponedDays(document.form.fwUpdatePostponement))
+
+    let fwUpdatePostponement = document.form.fwUpdatePostponement;
+    if (!ValidatePostponedDays(fwUpdatePostponement))
     {
         alert(`${validationErrorMsg}\n\n` + fwPostponedDays.ErrorMsg());
+        FocusInvalidFieldAfterAlert(fwUpdatePostponement);
         return false;
     }
-    if (document.form.fwScheduleHOUR.disabled === false &&
-        !ValidateFWUpdateTime(document.form.fwScheduleHOUR, 'HOUR'))
+
+    let fwScheduleHOUR = document.form.fwScheduleHOUR;
+    if (fwScheduleHOUR.disabled === false &&
+        !ValidateFWUpdateTime(fwScheduleHOUR, 'HOUR'))
     {
         alert(`${validationErrorMsg}\n\n` + fwScheduleTime.ErrorMsg('HOUR'));
+        FocusInvalidFieldAfterAlert(fwScheduleHOUR);
         return false;
     }
-    if (document.form.fwScheduleMINS.disabled === false &&
-        !ValidateFWUpdateTime(document.form.fwScheduleMINS, 'MINS'))
+
+    let fwScheduleMINS = document.form.fwScheduleMINS;
+    if (fwScheduleMINS.disabled === false &&
+        !ValidateFWUpdateTime(fwScheduleMINS, 'MINS'))
     {
         alert(`${validationErrorMsg}\n\n` + fwScheduleTime.ErrorMsg('MINS'));
+        FocusInvalidFieldAfterAlert(fwScheduleMINS);
         return false;
     }
+
+    let fwScheduleXDAYS = document.form.fwScheduleXDAYS;
     if (document.getElementById('fwSchedBoxDAYSX').checked &&
-        !ValidateFWUpdateXDays(document.form.fwScheduleXDAYS, 'DAYS'))
+        !ValidateFWUpdateXDays(fwScheduleXDAYS, 'DAYS'))
     {
         alert(`${validationErrorMsg}\n\n` + fwScheduleTime.ErrorMsg('DAYS'));
+        FocusInvalidFieldAfterAlert(fwScheduleXDAYS);
         return false;
     }
 
@@ -2350,75 +2688,84 @@ function SaveCombinedConfig()
     let secondaryEmail = document.getElementById('secondaryEmail');
     let emailNotificationsEnabled = document.getElementById('emailNotificationsEnabled');
 
-    if (emailNotificationsEnabled && !emailNotificationsEnabled.disabled) {
+    if (emailNotificationsEnabled && !emailNotificationsEnabled.disabled)
+    {
         advanced_settings.FW_New_Update_EMail_Notification = emailNotificationsEnabled.checked ? 'ENABLED' : 'DISABLED';
     }
-    if (emailFormat && !emailFormat.disabled) {
+    if (emailFormat && !emailFormat.disabled)
+    {
         advanced_settings.FW_New_Update_EMail_FormatType = emailFormat.value || 'HTML';
     }
-    if (secondaryEmail && !secondaryEmail.disabled) {
+    if (secondaryEmail && !secondaryEmail.disabled)
+    {
         advanced_settings.FW_New_Update_EMail_CC_Address = secondaryEmail.value || 'TBD';
     }
 
     // F/W Update ZIP Directory //
     let fwUpdateZIPdirectory = document.getElementById('fwUpdateZIPDirectory');
-    if (fwUpdateZIPdirectory !== null && typeof fwUpdateZIPdirectory !== 'undefined')
+    if (ValidateDirectoryPath(fwUpdateZIPdirectory, 'ZIP'))
     {
-        if (ValidateDirectoryPath(fwUpdateZIPdirectory, 'ZIP')) {
-            advanced_settings.FW_New_Update_ZIP_Directory_Path = fwUpdateZIPdirectory.value;
-        }
-        else {
-            alert(`${validationErrorMsg}\n\n` + fwUpdateDirPath.ErrorMsg('ZIP'));
-            return false;
-        }
+        advanced_settings.FW_New_Update_ZIP_Directory_Path = fwUpdateZIPdirectory.value;
+    }
+    else
+    {
+        alert(`${validationErrorMsg}\n\n` + fwUpdateDirPath.ErrorMsg('ZIP'));
+        FocusInvalidFieldAfterAlert(fwUpdateZIPdirectory);
+        return false;
     }
 
     // F/W Update LOG Directory //
     let fwUpdateLOGdirectory = document.getElementById('fwUpdateLOGDirectory');
-    if (fwUpdateLOGdirectory !== null && typeof fwUpdateLOGdirectory !== 'undefined')
+    if (ValidateDirectoryPath(fwUpdateLOGdirectory, 'LOG'))
     {
-        if (ValidateDirectoryPath(fwUpdateLOGdirectory, 'LOG')) {
-            advanced_settings.FW_New_Update_LOG_Directory_Path = fwUpdateLOGdirectory.value;
-        }
-        else {
-            alert(`${validationErrorMsg}\n\n` + fwUpdateDirPath.ErrorMsg('LOG'));
-            return false;
-        }
+        advanced_settings.FW_New_Update_LOG_Directory_Path = fwUpdateLOGdirectory.value;
+    }
+    else
+    {
+        alert(`${validationErrorMsg}\n\n` + fwUpdateDirPath.ErrorMsg('LOG'));
+        FocusInvalidFieldAfterAlert(fwUpdateLOGdirectory);
+        return false;
     }
 
     // Tailscale/ZeroTier VPN Access //
     let tailscaleVPNEnabled = document.getElementById('tailscaleVPNEnabled');
-    if (tailscaleVPNEnabled && !tailscaleVPNEnabled.disabled) {
+    if (tailscaleVPNEnabled && !tailscaleVPNEnabled.disabled)
+    {
         advanced_settings.Allow_Updates_OverVPN = tailscaleVPNEnabled.checked ? 'ENABLED' : 'DISABLED';
     }
 
     // Automatic Script Updates //
     let script_AutoUpdate_Check = document.getElementById('Script_AutoUpdate_Check');
-    if (script_AutoUpdate_Check && !script_AutoUpdate_Check.disabled) {
+    if (script_AutoUpdate_Check && !script_AutoUpdate_Check.disabled)
+    {
         advanced_settings.Allow_Script_Auto_Update = script_AutoUpdate_Check.checked ? 'ENABLED' : 'DISABLED';
     }
 
     // Beta-to-Release Updates //
     let betaToReleaseUpdatesEnabled = document.getElementById('betaToReleaseUpdatesEnabled');
-    if (betaToReleaseUpdatesEnabled && !betaToReleaseUpdatesEnabled.disabled) {
+    if (betaToReleaseUpdatesEnabled && !betaToReleaseUpdatesEnabled.disabled)
+    {
         advanced_settings.FW_Allow_Beta_Production_Up = betaToReleaseUpdatesEnabled.checked ? 'ENABLED' : 'DISABLED';
     }
 
     // Automatic Backups //
     let autobackupEnabled = document.getElementById('autobackupEnabled');
-    if (autobackupEnabled && !autobackupEnabled.disabled) {
+    if (autobackupEnabled && !autobackupEnabled.disabled)
+    {
         advanced_settings.FW_Auto_Backupmon = autobackupEnabled.checked ? 'ENABLED' : 'DISABLED';
     }
 
     // ROG/TUF F/W Build Types (if rows are visible) //
     let rogFWBuildRow = document.getElementById('rogFWBuildRow');
     let rogFWBuildType = document.getElementById('rogFWBuildType');
-    if (rogFWBuildRow && rogFWBuildRow.style.display !== 'none' && rogFWBuildType) {
+    if (rogFWBuildRow && rogFWBuildRow.style.display !== 'none' && rogFWBuildType)
+    {
         advanced_settings.ROGBuild = (rogFWBuildType.value === 'ROG') ? 'ENABLED' : 'DISABLED';
     }
     let tufFWBuildRow = document.getElementById('tuffFWBuildRow');
     let tuffFWBuildType = document.getElementById('tuffFWBuildType');
-    if (tufFWBuildRow && tufFWBuildRow.style.display !== 'none' && tuffFWBuildType) {
+    if (tufFWBuildRow && tufFWBuildRow.style.display !== 'none' && tuffFWBuildType)
+    {
         advanced_settings.TUFBuild = (tuffFWBuildType.value === 'TUF') ? 'ENABLED' : 'DISABLED';
     }
 
@@ -2509,7 +2856,7 @@ function UpdateMerlinAUScript()
         confirmText = "CHECK AND PROMPT:\n" +
                       "Check for a newer version of MerlinAU and prompt if found. " +
                       (autoUpdatesEnabled
-                          ? "It DOES install automatically!"
+                          ? "It DOES install update automatically!"
                           : "It does NOT install update automatically!") +
                       "\n\nContinue?";
     }
@@ -2530,30 +2877,167 @@ function UpdateMerlinAUScript()
     document.form.submit();
 }
 
-/**----------------------------------------**/
-/** Modified by Martinski W. [2025-May-11] **/
-/**----------------------------------------**/
+function ParseMerlinAUDate(dateText)
+{
+   if (dateText === null || typeof dateText === 'undefined')
+   { return null; }
+
+   let cleanText = String(dateText).trim();
+
+   if (cleanText.length === 0 || cleanText === 'TBD')
+   { return null; }
+
+   cleanText = cleanText.replace('_', ' ');
+
+   let dateMatch = cleanText.match(
+      /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/
+   );
+
+   if (dateMatch === null)
+   { return null; }
+
+   let yearNum = parseInt(dateMatch[1], 10);
+   let monthNum = parseInt(dateMatch[2], 10) - 1;
+   let dayNum = parseInt(dateMatch[3], 10);
+   let hourNum = parseInt(dateMatch[4] || '0', 10);
+   let minsNum = parseInt(dateMatch[5] || '0', 10);
+   let secsNum = parseInt(dateMatch[6] || '0', 10);
+
+   let parsedDate = new Date(
+      yearNum,
+      monthNum,
+      dayNum,
+      hourNum,
+      minsNum,
+      secsNum
+   );
+
+   if (isNaN(parsedDate.getTime()))
+   { return null; }
+
+   return parsedDate;
+}
+
+function IsFWPostponementExpired(postponedDays)
+{
+   if (postponedDays <= 0)
+   { return true; }
+
+   let estimatedRunDate = ParseMerlinAUDate(fwUpdateEstimatedRunDate);
+
+   if (estimatedRunDate !== null)
+   { return (estimatedRunDate.getTime() <= Date.now()); }
+
+   let notifyDate = ParseMerlinAUDate(
+      custom_settings.FW_New_Update_Notifications_Date
+   );
+
+   if (notifyDate === null)
+   { return false; }
+
+   notifyDate.setDate(notifyDate.getDate() + postponedDays);
+
+   return (notifyDate.getTime() <= Date.now());
+}
+
+/**------------------------------------------**/
+/** Modified by ExtremeFiretop [2026-Apr-27] **/
+/**------------------------------------------**/
 function CheckFirmwareUpdate()
 {
    console.log("Initiating F/W Update Check...");
 
    let actionScriptValue;
    let bypassPostponedDays = document.getElementById('BypassPostponedDays');
-   if (!bypassPostponedDays.checked)
+   let isBypassPostponedDays =
+       bypassPostponedDays ? bypassPostponedDays.checked : false;
+
+   let fwVersionInstalled = GetInstalledFWVersionFromUI();
+   let fwUpdateAvailable = FW_NewUpdateVersAvailable || '';
+
+   let usePrereleaseRank =
+       (custom_settings.FW_Allow_Beta_Production_Up === 'ENABLED');
+
+   let verNumAvailable =
+       FWVersionStrToNum(fwUpdateAvailable, usePrereleaseRank);
+
+   let verNumInstalled =
+       FWVersionStrToNum(fwVersionInstalled, usePrereleaseRank);
+
+   let isFwUpdateAvailable =
+       (verNumAvailable !== 0 && verNumAvailable > verNumInstalled);
+
+   let fwUpdatePostponement =
+       document.getElementById('fwUpdatePostponement');
+
+   let postponedDaysValue = fwUpdatePostponement
+       ? fwUpdatePostponement.value
+       : custom_settings.FW_New_Update_Postponement_Days;
+
+   let postponedDays = parseInt(postponedDaysValue || '0', 10);
+
+   if (isNaN(postponedDays))
+   { postponedDays = 0; }
+
+   let hasPostponementConfigured = (postponedDays > 0);
+
+   let isPostponementExpired =
+       isFwUpdateAvailable &&
+       hasPostponementConfigured &&
+       IsFWPostponementExpired(postponedDays);
+
+   let mayFlashNow =
+       isBypassPostponedDays ||
+       !hasPostponementConfigured ||
+       isPostponementExpired;
+
+   if (!isBypassPostponedDays)
    {
        actionScriptValue = 'start_MerlinAUcheckfwupdate';
-       if (!confirm("NOTE:\nIf you have no postponement days set or remaining, the firmware may flash NOW!\nThis means logging you out of the WebUI and rebooting the router.\nContinue to check for firmware updates now?"))
-       { return; }
+
+       if (mayFlashNow)
+       {
+           if (!confirm(
+               "NOTE:\n" +
+               "This update check may start the firmware flash NOW!\n\n" +
+               "This means logging you out of the WebUI automatically and rebooting the router.\n\n" +
+               "Continue to check for firmware updates now?"
+           ))
+           { return; }
+       }
+       else
+       {
+           if (!confirm(
+               "NOTE:\n" +
+               "This update check will respect your configured postponement setting. " +
+               "If a firmware update is found or already detected, it will not " +
+               "be flashed until the postponement period has expired.\n\n" +
+               "Continue to check for firmware updates now?"
+           ))
+           { return; }
+       }
    }
    else
    {
        actionScriptValue = 'start_MerlinAUcheckfwupdate_bypassDays';
-       if (!confirm("NOTE:\nThe firmware may flash NOW!\nThis means logging you out of the WebUI and rebooting the router.\nContinue to check for firmware updates now?"))
+
+       if (!confirm(
+           "NOTE:\n" +
+           "Bypassing postponed days may start the firmware update flash NOW!\n\n" +
+           "This means logging you out of the WebUI automatically and rebooting the router.\n\n" +
+           "Continue to check for firmware updates now?"
+       ))
        { return; }
    }
 
    document.form.action_script.value = actionScriptValue;
-   document.form.action_wait.value = 60;
+   document.form.action_wait.value = mayFlashNow ? 180 : 30;
+
+   ConsoleLogDEBUG(
+       "F/W Update Check action_wait:",
+       document.form.action_wait.value
+   );
+
    showLoading();
    document.form.submit();
 }
@@ -2769,9 +3253,8 @@ function initializeCollapsibleSections()
 <tbody>
 <tr style="background-color:#4D595D;">
 <td valign="top">
-<div>&nbsp;</div>
 <div class="formfonttitle" id="headerTitle" style="text-align:center;">MerlinAU</div>
-<div style="margin:10px 0 10px 5px;" class="splitLine"></div>
+<div class="merlinDivider"></div>
 <div class="formfontdesc">This is the MerlinAU add-on integrated into the router WebUI
 <span style="margin-left:8px;" id="WikiURL">[
    <a style="font-weight:bolder; text-decoration:underline; cursor:pointer;"
@@ -2927,7 +3410,7 @@ function initializeCollapsibleSections()
                       margin-left:-5px; margin-top:5px; margin-bottom:8px"/>Install script update</label>
     </br>
 </td>
-<td style="text-align: left; border: none;">
+<td style="text-align: center; border: none;">
    <input type="submit" id="UninstallButton" onclick="Uninstall(); return false;"
     value="Uninstall" class="button_gen savebutton" name="button">
    <br>
@@ -3023,8 +3506,10 @@ function initializeCollapsibleSections()
 <!--** F/W Update Check Cron Schedule **-->
 <tr>
   <td style="text-align: left;">
-    <label id="fwUpdateCheckScheduleLabel" for="fwUpdateCheckSchedule">
-      Schedule for F/W Update Checks
+    <label for="fwScheduleXDAYS">
+      <a class="hintstyle" name="FW_UPDATE_SCHED" href="javascript:void(0);" onclick="ShowHintMsg(this);">
+        Schedule for F/W Update Checks
+      </a>
     </label>
   </td>
   <td>
