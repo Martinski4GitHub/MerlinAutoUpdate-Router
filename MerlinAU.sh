@@ -9,8 +9,8 @@
 set -u
 
 ## Set version for each Production Release ##
-readonly SCRIPT_VERSION=1.6.2
-readonly SCRIPT_VERSTAG="26051600"
+readonly SCRIPT_VERSION=1.6.3
+readonly SCRIPT_VERSTAG="26052100"
 readonly SCRIPT_NAME="MerlinAU"
 ## Set to "master" for Production Releases ##
 SCRIPT_BRANCH="dev"
@@ -3062,15 +3062,18 @@ _SCRIPT_UPDATE_()
                _SendEMailNotification_ SUCCESS_SCRIPT_UPDATE_STATUS
            fi
            sleep 1
-           if [ $# -lt 2 ] || [ -z "$2" ]
+           if [ $# -ge 2 ] && [ "$2" = "unattended" ]
+           then
+               return 0
+           fi
+
+           if "$isInteractive" && [ -t 0 ]
            then
                _ReleaseLock_
                exec "$ScriptFilePath"
                exit 0
-           elif [ "$2" = "unattended" ]
-           then
-               return 0
            fi
+           return 0
        else
            if ! "$isInteractive"
            then
@@ -3255,12 +3258,18 @@ _CheckForNewScriptUpdates_()
 ${REDct}v${SCRIPT_VERSION}${NOct} --> ${GRNct}v${DLRepoVersion}${NOct}"
        _WriteVarDefToHelperJSFile_ "isScriptUpdateAvailable" "$DLRepoVersion"
        if [ $# -gt 0 ] && [ "$1" = "-quietcheck" ]
-       then return 0
+       then 
+           return 0
        fi
        Say "$myLAN_HostName - A new script version update (v$DLRepoVersion) is available to download."
        if [ "$ScriptAutoUpdateSetting" = "ENABLED" ]
        then
-           _SCRIPT_UPDATE_ force
+           if "$isInteractive" && [ -t 0 ]
+           then
+               _SCRIPT_UPDATE_ force
+           else
+               _SCRIPT_UPDATE_ force unattended
+           fi
        fi
    else
        scriptUpdateNotify=0
@@ -12084,6 +12093,11 @@ FW_NewUpdateVerInit=TBD
 if [ $# -eq 0 ] || [ -z "$1" ] || \
    { [ $# -gt 1 ] && [ "$1" = "reload" ] ; }
 then
+   if [ ! -t 0 ]; then
+       printf "MerlinAU: refusing to open menu without a TTY.\n" >&2
+       _DoExit_ 1
+   fi
+
    if ! _AcquireLock_ cliMenuLock
    then Say "Exiting..." ; exit 1 ; fi
 
