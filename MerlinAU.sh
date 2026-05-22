@@ -4,13 +4,13 @@
 #
 # Original Creation Date: 2023-Oct-01 by @ExtremeFiretop.
 # Official Co-Author: @Martinski W. - Date: 2023-Nov-01
-# Last Modified: 2026-May-16
+# Last Modified: 2026-May-21
 ###################################################################
 set -u
 
 ## Set version for each Production Release ##
-readonly SCRIPT_VERSION=1.6.2
-readonly SCRIPT_VERSTAG="26051600"
+readonly SCRIPT_VERSION=1.6.3
+readonly SCRIPT_VERSTAG="26052123"
 readonly SCRIPT_NAME="MerlinAU"
 ## Set to "master" for Production Releases ##
 SCRIPT_BRANCH="master"
@@ -173,13 +173,27 @@ fi
 inMenuMode=true
 webguiMode=false
 isVerbose=false
-isInteractive=false
 FlashStarted=false
 MerlinChangeLogURL=""
 GnutonChangeLogURL=""
 keepConfigFile=false
 bypassPostponedDays=false
 runLoginCredentialsTest=false
+
+if [ -t 0 ] && ! tty | grep -qwi "NOT"
+then
+   isVerbose=true
+   readonly isInteractive=true
+   readonly gSavedSTTY="$(stty -g)"
+else
+   readonly isInteractive=false
+fi
+
+if [ "$isInteractive" = "false" ] && { [ $# -eq 0 ] || [ -z "$1" ] ; }
+then
+   logger -st "${SCRIPT_NAME}_[$$]" -p 3 "**ERROR**: CLI Menu is NOT available in a non-interactive shell"
+   exit 1
+fi
 
 # Main LAN Network Info #
 readonly myLAN_HostName="$(nvram get lan_hostname)"
@@ -276,12 +290,6 @@ routerLoginFailureMsg="Please try the following:
 2. Check that the \"Enable Access Restrictions\" option from the webGUI is *not* set up
    to restrict access to the router webGUI from the router's IP address [${GRNct}${mainLAN_IPaddr}${NOct}].
 3. Confirm your password via the \"Set Router Login Password\" option from the Main Menu."
-
-if [ -t 0 ] && ! tty | grep -qwi "NOT"
-then
-   isInteractive=true ; isVerbose=true
-   readonly gSavedSTTY="$(stty -g)"
-fi
 
 ##----------------------------------------##
 ## Modified by Martinski W. [2023-Dec-23] ##
@@ -3011,7 +3019,7 @@ _CheckNewScriptMinFWBeforeUpdate_()
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2026-Feb-22] ##
+## Modified by Martinski W. [2026-May-21] ##
 ##----------------------------------------##
 _SCRIPT_UPDATE_()
 {
@@ -3062,14 +3070,13 @@ _SCRIPT_UPDATE_()
                _SendEMailNotification_ SUCCESS_SCRIPT_UPDATE_STATUS
            fi
            sleep 1
-           if [ $# -lt 2 ] || [ -z "$2" ]
+           if "$isInteractive" && { [ $# -lt 2 ] || [ -z "$2" ] ; }
            then
                _ReleaseLock_
                exec "$ScriptFilePath"
                exit 0
-           elif [ "$2" = "unattended" ]
-           then
-               return 0
+           else
+               return 0  #Unattended#
            fi
        else
            if ! "$isInteractive"
@@ -3197,9 +3204,9 @@ ScriptUpdateFromAMTM()
     return "$retCode"
 }
 
-##------------------------------------------##
-## Modified by ExtremeFiretop [2025-May-10] ##
-##------------------------------------------##
+##----------------------------------------##
+## Modified by Martinski W. [2026-May-21] ##
+##----------------------------------------##
 _CheckForNewScriptUpdates_()
 {
    local verStr  DLScriptVerPath="${SCRIPT_VERPATH}.DL.tmp"
@@ -3254,13 +3261,19 @@ _CheckForNewScriptUpdates_()
        scriptUpdateNotify="New script update available.
 ${REDct}v${SCRIPT_VERSION}${NOct} --> ${GRNct}v${DLRepoVersion}${NOct}"
        _WriteVarDefToHelperJSFile_ "isScriptUpdateAvailable" "$DLRepoVersion"
+
        if [ $# -gt 0 ] && [ "$1" = "-quietcheck" ]
        then return 0
        fi
        Say "$myLAN_HostName - A new script version update (v$DLRepoVersion) is available to download."
        if [ "$ScriptAutoUpdateSetting" = "ENABLED" ]
        then
-           _SCRIPT_UPDATE_ force
+           if "$isInteractive" && { [ $# -eq 0 ] || [ -z "$1" ] ; }
+           then
+               _SCRIPT_UPDATE_ force
+           else
+               _SCRIPT_UPDATE_ force unattended
+           fi
        fi
    else
        scriptUpdateNotify=0
@@ -4630,6 +4643,12 @@ _GetKeypressInput_()
    local theKeySeqCnt theKeySeqNum  retCode
    local offlineUpdKeyFlag  execReloadKeyFlag
    local specialKeyCharCodes="12 16 18 24 25 27"
+
+   if [ "$isInteractive" = "false" ]
+   then
+       theUserInputStr="exit"
+       return 0  #Defensive Exit#
+   fi
 
    if [ -n "${offlineUpdTrigger:+xSETx}" ]
    then
@@ -12085,7 +12104,8 @@ if [ $# -eq 0 ] || [ -z "$1" ] || \
    { [ $# -gt 1 ] && [ "$1" = "reload" ] ; }
 then
    if ! _AcquireLock_ cliMenuLock
-   then Say "Exiting..." ; exit 1 ; fi
+   then Say "Exiting..." ; exit 1
+   fi
 
    inMenuMode=true
    _DoInitializationStartup_
@@ -12147,7 +12167,7 @@ then
        checkupdates)
            if _AcquireLock_ cliFileLock
            then
-               _CheckForNewScriptUpdates_
+               _CheckForNewScriptUpdates_ unattended
                _ReleaseLock_ cliFileLock
            fi
            ;;
@@ -12234,8 +12254,8 @@ then
                        if _AcquireLock_ cliFileLock
                        then
                            if [ "$3" = "${SCRIPT_NAME}scrptupdate_force" ]
-                           then _SCRIPT_UPDATE_ force
-                           else _CheckForNewScriptUpdates_
+                           then _SCRIPT_UPDATE_ force unattended
+                           else _CheckForNewScriptUpdates_ unattended
                            fi
                            _ReleaseLock_ cliFileLock
                        fi
