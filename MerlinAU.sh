@@ -2223,9 +2223,9 @@ readonly POST_REBOOT_SCRIPT_HOOK="[ -x $ScriptFilePath ] && $POST_REBOOT_SCRIPT_
 readonly POST_UPDATE_EMAIL_SCRIPT_JOB="$ScriptFilePath postUpdateEmail &"
 readonly POST_UPDATE_EMAIL_SCRIPT_HOOK="[ -x $ScriptFilePath ] && $POST_UPDATE_EMAIL_SCRIPT_JOB $hookScriptTagStr"
 
-##-------------------------------------##
-## Added by Martinski W. [2026-Feb-07] ##
-##-------------------------------------##
+##------------------------------------------##
+## Modified by ExtremeFiretop [2026-Jun-10] ##
+##------------------------------------------##
 _CleanUpOldLogFiles_()
 {
     [ ! -d "$FW_LOG_DIR" ] && return 1
@@ -12057,9 +12057,9 @@ _DoInitializationStartup_()
    _SetDefaultBuildType_
 }
 
-##----------------------------------------##
-## Modified by Martinski W. [2025-Jul-29] ##
-##----------------------------------------##
+##------------------------------------------##
+## Modified by ExtremeFiretop [2026-Jun-10] ##
+##------------------------------------------##
 #######################################################################
 # TEMPORARY hack to check if the Gnuton F/W built-in 'webs_update.sh' 
 # script is the most recent version that includes required fixes.
@@ -12168,9 +12168,9 @@ _Gnuton_Check_Webs_Update_Script_()
    return 0
 }
 
-##-------------------------------------##
-## Initialization operations mutex     ##
-##-------------------------------------##
+##---------------------------------------##
+## Added by ExtremeFiretop [2026-Jun-10] ##
+##---------------------------------------##
 # Serialize startup-time operations that use shared log and GNUton files.
 _RunLockedInitializationChecks_()
 {
