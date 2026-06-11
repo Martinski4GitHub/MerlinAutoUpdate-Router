@@ -540,6 +540,27 @@ _AcquireLock_()
 }
 
 ##-------------------------------------##
+## Added for initialization operations ##
+##-------------------------------------##
+initMutexFLock_FD=577
+initMutexFLock_FN="/tmp/var/${ScriptFNameTag}_Initialization.FLock"
+
+#--------------------------------------------------------------#
+# This is a mutually exclusive, blocking FLOCK mechanism used
+# to protect initialization routines when concurrent MerlinAU
+# executions are running (e.g. called from services-start).
+#--------------------------------------------------------------#
+_AcquireInitMutexFLock_()
+{
+   eval exec "$initMutexFLock_FD>$initMutexFLock_FN"
+   flock -x "$initMutexFLock_FD" 2>/dev/null
+   return "$?"
+}
+
+_ReleaseInitMutexFLock_()
+{ flock -u "$initMutexFLock_FD" 2>/dev/null ; }
+
+##-------------------------------------##
 ## Added by Martinski W. [2026-Mar-18] ##
 ##-------------------------------------##
 fwupMutexFLock_FD=576
@@ -2236,7 +2257,7 @@ _CleanUpOldLogFiles_()
     if [ -n "$topLogFile" ] && [ -s "$topLogFile" ]
     then
         savedTopLogFile="${topLogFile}.SAVED.$$.TEMP.LOG"
-        if ! mv -f "$topLogFile" "$savedTopLogFile"
+        if ! mv -f "$topLogFile" "$savedTopLogFile" 2>/dev/null
         then
             return 1
         fi
@@ -2250,7 +2271,7 @@ _CleanUpOldLogFiles_()
        [ -n "$savedTopLogFile" ] && \
        [ -s "$savedTopLogFile" ]
     then
-        if ! mv -f "$savedTopLogFile" "$topLogFile"
+        if ! mv -f "$savedTopLogFile" "$topLogFile" 2>/dev/null
         then
             return 1
         fi
@@ -12083,7 +12104,7 @@ _Gnuton_Check_Webs_Update_Script_()
    # Get the fixed version of the script targeted for Gnuton F/W #
    if _CurlFileDownload_ "gnuton_webs_update.sh" "$dwnldGnutonWebsUpdateFilePath"
    then
-       if ! chmod 755 "$dwnldGnutonWebsUpdateFilePath"
+       if ! chmod 755 "$dwnldGnutonWebsUpdateFilePath" 2>/dev/null
        then
            Say "${REDct}**ERROR**${NOct}: Unable to set permissions on the downloaded GNUton \"${FW_WebsUpdateFile}\" file."
            rm -f "$dwnldGnutonWebsUpdateFilePath"
@@ -12122,7 +12143,7 @@ _Gnuton_Check_Webs_Update_Script_()
            return 1
        fi
 
-       if ! mv -f "$dwnldGnutonWebsUpdateFilePath" "$fixedGnutonWebsUpdateFilePath"
+       if ! mv -f "$dwnldGnutonWebsUpdateFilePath" "$fixedGnutonWebsUpdateFilePath" 2>/dev/null
        then
            Say "${REDct}**ERROR**${NOct}: Unable to install the fixed GNUton \"${FW_WebsUpdateFile}\" file."
            rm -f "$dwnldGnutonWebsUpdateFilePath"
@@ -12187,12 +12208,13 @@ FW_InstalledVersion="$(_GetCurrentFWInstalledLongVersion_)"
 FW_InstalledVerStr="${GRNct}${FW_InstalledVersion}${NOct}"
 FW_NewUpdateVerInit=TBD
 
-if _AcquireLock_ cliInitLock
+if _AcquireInitMutexFLock_
 then
     _RunLockedInitializationChecks_
-    _ReleaseLock_ cliInitLock
+    _ReleaseInitMutexFLock_
 else
-    Say "Exiting..." ; exit 1
+    Say "${REDct}**ERROR**${NOct}: Unable to acquire the initialization lock. Exiting..."
+    exit 1
 fi
 
 ##----------------------------------------##
