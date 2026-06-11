@@ -552,13 +552,19 @@ initMutexFLock_FN="/tmp/var/${ScriptFNameTag}_Initialization.FLock"
 #--------------------------------------------------------------#
 _AcquireInitMutexFLock_()
 {
-   eval exec "$initMutexFLock_FD>$initMutexFLock_FN"
-   flock -x "$initMutexFLock_FD" 2>/dev/null
-   return "$?"
+   eval exec "${initMutexFLock_FD}>$initMutexFLock_FN"
+   if flock -x "$initMutexFLock_FD" 2>/dev/null
+   then return 0
+   fi
+   eval exec "${initMutexFLock_FD}>&-"
+   return 1
 }
 
 _ReleaseInitMutexFLock_()
-{ flock -u "$initMutexFLock_FD" 2>/dev/null ; }
+{
+   flock -u "$initMutexFLock_FD" 2>/dev/null
+   eval exec "${initMutexFLock_FD}>&-"
+}
 
 ##-------------------------------------##
 ## Added by Martinski W. [2026-Mar-18] ##
