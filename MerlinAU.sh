@@ -9,8 +9,8 @@
 set -u
 
 ## Set version for each Production Release ##
-readonly SCRIPT_VERSION=1.6.3
-readonly SCRIPT_VERSTAG="26052123"
+readonly SCRIPT_VERSION=1.6.4
+readonly SCRIPT_VERSTAG="26061019"
 readonly SCRIPT_NAME="MerlinAU"
 ## Set to "master" for Production Releases ##
 SCRIPT_BRANCH="master"
@@ -545,6 +545,12 @@ _AcquireLock_()
 fwupMutexFLock_FD=576
 fwupMutexFLock_FN="/tmp/var/${ScriptFNameTag}_FW_Update.FLock"
 fwupMutexFLock_OK=false  #DO NOT have FLock#
+
+##-------------------------------------##
+## Added for initialization operations ##
+##-------------------------------------##
+initMutexFLock_FD=577
+initMutexFLock_FN="/tmp/var/${ScriptFNameTag}_Initialization.FLock"
 
 _ReleaseMutexFLock_()
 {
@@ -2217,13 +2223,13 @@ readonly POST_REBOOT_SCRIPT_HOOK="[ -x $ScriptFilePath ] && $POST_REBOOT_SCRIPT_
 readonly POST_UPDATE_EMAIL_SCRIPT_JOB="$ScriptFilePath postUpdateEmail &"
 readonly POST_UPDATE_EMAIL_SCRIPT_HOOK="[ -x $ScriptFilePath ] && $POST_UPDATE_EMAIL_SCRIPT_JOB $hookScriptTagStr"
 
-##-------------------------------------##
-## Added by Martinski W. [2026-Feb-07] ##
-##-------------------------------------##
+##------------------------------------------##
+## Modified by ExtremeFiretop [2026-Jun-10] ##
+##------------------------------------------##
 _CleanUpOldLogFiles_()
 {
     [ ! -d "$FW_LOG_DIR" ] && return 1
-    local numLogFiles  topLogFile
+    local numLogFiles topFile savedTopFile
 
     numLogFiles="$(ls -1lt "$FW_LOG_DIR"/*.log 2>/dev/null | wc -l)"
     # Leave one log file (if any available) #
@@ -2231,16 +2237,31 @@ _CleanUpOldLogFiles_()
 
     # Save the most recent log file #
     topFile="$(ls -1t "$FW_LOG_DIR"/*.log 2>/dev/null | head -n1)"
-    [ -n "$topFile" ] && mv -f "$topFile" "${topFile}.SAVED.TEMP.LOG"
+
+    if [ -n "$topFile" ]
+    then
+        savedTopFile="${topFile}.SAVED.$$.TEMP.LOG"
+
+        if ! mv -f "$topFile" "$savedTopFile"
+        then
+            return 1
+        fi
+    fi
 
     # Delete logs older than 30 days #
     /usr/bin/find -L "$FW_LOG_DIR" -name '*.log' -mtime +30 -exec rm {} \;
 
     # Restore the most recent log file #
-    [ -n "$topFile" ] && mv -f "${topFile}.SAVED.TEMP.LOG" "$topFile"
-}
+    if [ -n "$topFile" ] && [ -f "$savedTopFile" ]
+    then
+        if ! mv -f "$savedTopFile" "$topFile"
+        then
+            return 1
+        fi
+    fi
 
-_CleanUpOldLogFiles_
+    return 0
+}
 
 ##----------------------------------------##
 ## Modified by Martinski W. [2024-Jan-27] ##
@@ -2860,7 +2881,7 @@ _CurlFileDownload_()
    then return 1
    fi
    local retCode=1
-   local tempFilePathDL="${2}.DL.TMP"
+   local tempFilePathDL="${2}.DL.$$.TMP"
    local srceFilePathDL="${SCRIPT_URL_REPO}/$1"
 
    curl -LSs --retry 4 --retry-delay 5 --retry-connrefused \
@@ -2877,7 +2898,11 @@ _CurlFileDownload_()
        then updatedWebUIPage=true
        else updatedWebUIPage=false
        fi
-       mv -f "$tempFilePathDL" "$2"
+       if ! mv -f "$tempFilePathDL" "$2"
+       then
+           rm -f "$tempFilePathDL"
+           return 1
+       fi
        retCode=0
    fi
 
@@ -12032,9 +12057,9 @@ _DoInitializationStartup_()
    _SetDefaultBuildType_
 }
 
-##----------------------------------------##
-## Modified by Martinski W. [2025-Jul-29] ##
-##----------------------------------------##
+##------------------------------------------##
+## Modified by ExtremeFiretop [2026-Jun-10] ##
+##------------------------------------------##
 #######################################################################
 # TEMPORARY hack to check if the Gnuton F/W built-in 'webs_update.sh' 
 # script is the most recent version that includes required fixes.
@@ -12054,8 +12079,8 @@ _Gnuton_Check_Webs_Update_Script_()
 
    local theWebsUpdateFile="webs_update.sh"
    local fixedGnutonWebsUpdateFilePath="${SETTINGS_DIR}/$theWebsUpdateFile"
-   local dwnldGnutonWebsUpdateFilePath="${SETTINGS_DIR}/${theWebsUpdateFile}.GNUTON"
-   local localVersTag  remoteVersTag
+   local dwnldGnutonWebsUpdateFilePath="${SETTINGS_DIR}/${theWebsUpdateFile}.GNUTON.$$"
+   local localVersTag remoteVersTag diffRC
 
    # Get local VERSTAG (if any) #
    localVersTag="$(_Get_GnutonWebUpdate_ScriptVersTag_ "$FW_UpdateCheckScript")"
@@ -12064,34 +12089,136 @@ _Gnuton_Check_Webs_Update_Script_()
    # Get the fixed version of the script targeted for Gnuton F/W #
    if _CurlFileDownload_ "gnuton_webs_update.sh" "$dwnldGnutonWebsUpdateFilePath"
    then
-       chmod 755 "$dwnldGnutonWebsUpdateFilePath"
+       if ! chmod 755 "$dwnldGnutonWebsUpdateFilePath"
+       then
+           Say "${REDct}**ERROR**${NOct}: Unable to set permissions on the downloaded GNUton webs_update.sh file."
+           rm -f "$dwnldGnutonWebsUpdateFilePath"
+           return 1
+       fi
+
        remoteVersTag="$(_Get_GnutonWebUpdate_ScriptVersTag_ "$dwnldGnutonWebsUpdateFilePath")"
        [ -z "$remoteVersTag" ] && remoteVersTag=0
    else
-       return 1  #NOT available so do nothing#
+       rm -f "$dwnldGnutonWebsUpdateFilePath"
+       return 1
+   fi
+
+   # Distinguish files that differ from an actual comparison error.
+   diff -q "$FW_UpdateCheckScript" "$dwnldGnutonWebsUpdateFilePath" >/dev/null 2>&1
+
+   diffRC=$?
+
+   if [ "$diffRC" -gt 1 ]
+   then
+       Say "${REDct}**ERROR**${NOct}: Unable to compare the GNUton webs_update.sh files."
+       rm -f "$dwnldGnutonWebsUpdateFilePath"
+       return 1
    fi
 
    # (Re)bind/mount only if remote is newer version OR files differ #
    if [ "$remoteVersTag" -gt "$localVersTag" ] || \
-      ! diff -q "$FW_UpdateCheckScript" "$dwnldGnutonWebsUpdateFilePath" >/dev/null 2>&1
+      [ "$diffRC" -eq 1 ]
    then
-       umount "$FW_UpdateCheckScript" 2>/dev/null
-       mv -f "$dwnldGnutonWebsUpdateFilePath" "$fixedGnutonWebsUpdateFilePath"
-       mount -o bind "$fixedGnutonWebsUpdateFilePath" "$FW_UpdateCheckScript"
+       # Remove all existing bind-mount layers, including duplicates.
+       while awk -v target="$FW_UpdateCheckScript" '
+           $2 == target { found=1 }
+           END { exit !found }
+       ' /proc/mounts
+       do
+           if ! umount "$FW_UpdateCheckScript"
+           then
+               Say "${REDct}**ERROR**${NOct}: Unable to unmount \"$FW_UpdateCheckScript\"."
+               rm -f "$dwnldGnutonWebsUpdateFilePath"
+               return 1
+           fi
+       done
+
+       if ! mv -f "$dwnldGnutonWebsUpdateFilePath" "$fixedGnutonWebsUpdateFilePath"
+       then
+           Say "${REDct}**ERROR**${NOct}: Unable to install the fixed GNUton webs_update.sh file."
+           rm -f "$dwnldGnutonWebsUpdateFilePath"
+           return 1
+       fi
+
+       if [ ! -f "$fixedGnutonWebsUpdateFilePath" ]
+       then
+           Say "${REDct}**ERROR**${NOct}: GNUton webs_update.sh source file is missing before bind mount."
+           return 1
+       fi
+
+       if [ ! -e "$FW_UpdateCheckScript" ]
+       then
+           Say "${REDct}**ERROR**${NOct}: Bind-mount target \"$FW_UpdateCheckScript\" does not exist."
+           return 1
+       fi
+
+       if ! mount -o bind \
+           "$fixedGnutonWebsUpdateFilePath" \
+           "$FW_UpdateCheckScript"
+       then
+           Say "${REDct}**ERROR**${NOct}: Unable to bind-mount the fixed GNUton webs_update.sh file."
+           return 1
+       fi
+
        Say "${YLWct}Set up a fixed version of the \"${theWebsUpdateFile}\" script file.${NOct}"
    else
        rm -f "$dwnldGnutonWebsUpdateFilePath"
    fi
+
+   return 0
 }
+
+##---------------------------------------##
+## Added by ExtremeFiretop [2026-Jun-10] ##
+##---------------------------------------##
+# Serialize startup-time operations that use shared log and GNUton files.
+_RunLockedInitializationChecks_()
+{
+   local retCode=0
+
+   [ ! -d /tmp/var ] && mkdir -p /tmp/var
+
+   # Open the dedicated lock file on its own file descriptor.
+   if ! eval "exec ${initMutexFLock_FD}>\"${initMutexFLock_FN}\""
+   then
+       Say "${REDct}**ERROR**${NOct}: Unable to open the initialization lock file."
+       return 1
+   fi
+
+   # Use a blocking exclusive lock so concurrent MerlinAU processes wait.
+   if ! flock -x "$initMutexFLock_FD" 2>/dev/null
+   then
+       Say "${REDct}**ERROR**${NOct}: Unable to acquire the initialization lock."
+       eval "exec ${initMutexFLock_FD}>&-"
+       return 1
+   fi
+
+   # These operations access shared paths and must not overlap.
+   if [ -d "$FW_LOG_DIR" ] && \
+      ! _CleanUpOldLogFiles_
+   then
+       Say "${YLWct}WARNING:${NOct} Unable to clean up old firmware-update log files."
+       retCode=1
+   fi
+
+   checkWebsUpdateScriptForGnuton="$isGNUtonFW"
+   if ! _Gnuton_Check_Webs_Update_Script_
+   then
+       Say "${YLWct}WARNING:${NOct} Unable to check or install the GNUton webs_update.sh patch."
+       retCode=1
+   fi
+
+   flock -u "$initMutexFLock_FD" 2>/dev/null
+   eval "exec ${initMutexFLock_FD}>&-"
+
+   return "$retCode"
+}
+
 
 if [ "$SCRIPT_BRANCH" = "master" ]
 then SCRIPT_VERS_INFO=""
 else SCRIPT_VERS_INFO="[$versionDev_TAG]"
 fi
-
-## Set variable to 'false' to stop the check ##
-checkWebsUpdateScriptForGnuton="$isGNUtonFW"
-_Gnuton_Check_Webs_Update_Script_
 
 FW_InstalledVersion="$(_GetCurrentFWInstalledLongVersion_)"
 FW_InstalledVerStr="${GRNct}${FW_InstalledVersion}${NOct}"
@@ -12106,6 +12233,8 @@ then
    if ! _AcquireLock_ cliMenuLock
    then Say "Exiting..." ; exit 1
    fi
+
+   _RunLockedInitializationChecks_
 
    inMenuMode=true
    _DoInitializationStartup_
@@ -12133,6 +12262,8 @@ if [ $# -gt 0 ]
 then
    if ! _AcquireLock_ cliOptsLock
    then Say "Exiting..." ; exit 1 ; fi
+
+   _RunLockedInitializationChecks_
 
    [ "$1" = "amtmupdate" ] && isVerbose=false
 
