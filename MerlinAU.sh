@@ -10,7 +10,7 @@ set -u
 
 ## Set version for each Production Release ##
 readonly SCRIPT_VERSION=1.6.4
-readonly SCRIPT_VERSTAG="26061100"
+readonly SCRIPT_VERSTAG="26061118"
 readonly SCRIPT_NAME="MerlinAU"
 ## Set to "master" for Production Releases ##
 SCRIPT_BRANCH="dev"
@@ -413,7 +413,7 @@ _WaitForYESorNO_()
 ## Modified by Martinski W. [2025-Jan-11] ##
 ##----------------------------------------##
 readonly LockFilePath="/tmp/var/${ScriptFNameTag}.LOCK"
-readonly LockTypeRegEx="(cliInitLock|cliMenuLock|cliOptsLock|cliFileLock)"
+readonly LockTypeRegEx="(cliMenuLock|cliOptsLock|cliFileLock)"
 
 _FindLockFileTypes_()
 { grep -woE "$LockTypeRegEx" "$LockFilePath" | tr '\n' ' ' | sed 's/[ ]*$//' ; }
