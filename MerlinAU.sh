@@ -2250,7 +2250,7 @@ readonly POST_UPDATE_EMAIL_SCRIPT_HOOK="[ -x $ScriptFilePath ] && $POST_UPDATE_E
 ##------------------------------------------##
 _CleanUpOldLogFiles_()
 {
-    [ ! -d "$FW_LOG_DIR" ] && return 1
+    [ ! -d "$FW_LOG_DIR" ] && mkdir -p -m 755 "$FW_LOG_DIR"
     local numLogFiles  topLogFile  savedTopLogFile=""
 
     numLogFiles="$(ls -1lt "$FW_LOG_DIR"/*.log 2>/dev/null | wc -l)"
@@ -2270,7 +2270,18 @@ _CleanUpOldLogFiles_()
     fi
 
     # Delete logs older than 30 days #
-    /usr/bin/find -L "$FW_LOG_DIR" -name '*.log' -mtime +30 -exec rm {} \;
+    if ! /usr/bin/find -L "$FW_LOG_DIR" \
+        -name '*.log' \
+        -mtime +30 \
+        -exec rm -f {} \;
+    then
+        # Attempt restoration before returning failure.
+        [ -n "$savedTopLogFile" ] &&
+            [ -e "$savedTopLogFile" ] &&
+            mv -f "$savedTopLogFile" "$topLogFile" 2>/dev/null
+
+        return 1
+    fi
 
     # Restore the most recent log file #
     if [ -n "$topLogFile" ] && \
