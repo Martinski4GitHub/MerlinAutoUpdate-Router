@@ -2250,7 +2250,11 @@ readonly POST_UPDATE_EMAIL_SCRIPT_HOOK="[ -x $ScriptFilePath ] && $POST_UPDATE_E
 ##------------------------------------------##
 _CleanUpOldLogFiles_()
 {
-    [ ! -d "$FW_LOG_DIR" ] && mkdir -p -m 755 "$FW_LOG_DIR"
+    # Create the log directory on a fresh installation.
+    if [ ! -d "$FW_LOG_DIR" ]
+    then
+        mkdir -p -m 755 "$FW_LOG_DIR" 2>/dev/null || return 1
+    fi
     local numLogFiles  topLogFile  savedTopLogFile=""
 
     numLogFiles="$(ls -1lt "$FW_LOG_DIR"/*.log 2>/dev/null | wc -l)"
