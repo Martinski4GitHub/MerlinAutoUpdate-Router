@@ -4,13 +4,13 @@
 #
 # Original Creation Date: 2023-Oct-01 by @ExtremeFiretop.
 # Official Co-Author: @Martinski W. - Date: 2023-Nov-01
-# Last Modified: 2026-Jun-11
+# Last Modified: 2026-Jun-23
 ###################################################################
 set -u
 
 ## Set version for each Production Release ##
 readonly SCRIPT_VERSION=1.6.5
-readonly SCRIPT_VERSTAG="26062210"
+readonly SCRIPT_VERSTAG="26062300"
 readonly SCRIPT_NAME="MerlinAU"
 ## Set to "master" for Production Releases ##
 SCRIPT_BRANCH="dev"
@@ -2245,17 +2245,13 @@ readonly POST_REBOOT_SCRIPT_HOOK="[ -x $ScriptFilePath ] && $POST_REBOOT_SCRIPT_
 readonly POST_UPDATE_EMAIL_SCRIPT_JOB="$ScriptFilePath postUpdateEmail &"
 readonly POST_UPDATE_EMAIL_SCRIPT_HOOK="[ -x $ScriptFilePath ] && $POST_UPDATE_EMAIL_SCRIPT_JOB $hookScriptTagStr"
 
-##------------------------------------------##
-## Modified by ExtremeFiretop [2026-Jun-10] ##
-##------------------------------------------##
+##----------------------------------------##
+## Modified by Martinski W. [2026-Jun-23] ##
+##----------------------------------------##
 _CleanUpOldLogFiles_()
 {
-    # Create the log directory on a fresh installation.
-    if [ ! -d "$FW_LOG_DIR" ]
-    then
-        mkdir -p -m 755 "$FW_LOG_DIR" 2>/dev/null || return 1
-    fi
-    local numLogFiles  topLogFile  savedTopLogFile=""
+    [ ! -d "$FW_LOG_DIR" ] && return 0
+    local retCode  numLogFiles  topLogFile  savedTopLogFile=""
 
     numLogFiles="$(ls -1lt "$FW_LOG_DIR"/*.log 2>/dev/null | wc -l)"
     # Leave one log file (if any available) #
@@ -2274,18 +2270,8 @@ _CleanUpOldLogFiles_()
     fi
 
     # Delete logs older than 30 days #
-    if ! /usr/bin/find -L "$FW_LOG_DIR" \
-        -name '*.log' \
-        -mtime +30 \
-        -exec rm -f {} \;
-    then
-        # Attempt restoration before returning failure.
-        [ -n "$savedTopLogFile" ] &&
-            [ -e "$savedTopLogFile" ] &&
-            mv -f "$savedTopLogFile" "$topLogFile" 2>/dev/null
-
-        return 1
-    fi
+    /usr/bin/find -L "$FW_LOG_DIR" -name '*.log' -mtime +30 -exec rm {} \;
+    retCode="$?"
 
     # Restore the most recent log file #
     if [ -n "$topLogFile" ] && \
@@ -2297,7 +2283,7 @@ _CleanUpOldLogFiles_()
             return 1
         fi
     fi
-    return 0
+    return "$retCode"
 }
 
 ##----------------------------------------##
