@@ -9,11 +9,11 @@
 set -u
 
 ## Set version for each Production Release ##
-readonly SCRIPT_VERSION=1.6.4
-readonly SCRIPT_VERSTAG="26061118"
+readonly SCRIPT_VERSION=1.6.5
+readonly SCRIPT_VERSTAG="26062210"
 readonly SCRIPT_NAME="MerlinAU"
 ## Set to "master" for Production Releases ##
-SCRIPT_BRANCH="master"
+SCRIPT_BRANCH="dev"
 
 ##----------------------------------------##
 ## Modified by Martinski W. [2024-Jul-03] ##
@@ -2250,7 +2250,11 @@ readonly POST_UPDATE_EMAIL_SCRIPT_HOOK="[ -x $ScriptFilePath ] && $POST_UPDATE_E
 ##------------------------------------------##
 _CleanUpOldLogFiles_()
 {
-    [ ! -d "$FW_LOG_DIR" ] && return 1
+    # Create the log directory on a fresh installation.
+    if [ ! -d "$FW_LOG_DIR" ]
+    then
+        mkdir -p -m 755 "$FW_LOG_DIR" 2>/dev/null || return 1
+    fi
     local numLogFiles  topLogFile  savedTopLogFile=""
 
     numLogFiles="$(ls -1lt "$FW_LOG_DIR"/*.log 2>/dev/null | wc -l)"
@@ -2270,7 +2274,18 @@ _CleanUpOldLogFiles_()
     fi
 
     # Delete logs older than 30 days #
-    /usr/bin/find -L "$FW_LOG_DIR" -name '*.log' -mtime +30 -exec rm {} \;
+    if ! /usr/bin/find -L "$FW_LOG_DIR" \
+        -name '*.log' \
+        -mtime +30 \
+        -exec rm -f {} \;
+    then
+        # Attempt restoration before returning failure.
+        [ -n "$savedTopLogFile" ] &&
+            [ -e "$savedTopLogFile" ] &&
+            mv -f "$savedTopLogFile" "$topLogFile" 2>/dev/null
+
+        return 1
+    fi
 
     # Restore the most recent log file #
     if [ -n "$topLogFile" ] && \
