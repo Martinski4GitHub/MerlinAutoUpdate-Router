@@ -4,16 +4,16 @@
 #
 # Original Creation Date: 2023-Oct-01 by @ExtremeFiretop.
 # Official Co-Author: @Martinski W. - Date: 2023-Nov-01
-# Last Modified: 2026-Jun-11
+# Last Modified: 2026-Jun-23
 ###################################################################
 set -u
 
 ## Set version for each Production Release ##
-readonly SCRIPT_VERSION=1.6.4
-readonly SCRIPT_VERSTAG="26061118"
+readonly SCRIPT_VERSION=1.6.5
+readonly SCRIPT_VERSTAG="26062300"
 readonly SCRIPT_NAME="MerlinAU"
 ## Set to "master" for Production Releases ##
-SCRIPT_BRANCH="master"
+SCRIPT_BRANCH="dev"
 
 ##----------------------------------------##
 ## Modified by Martinski W. [2024-Jul-03] ##
@@ -2245,13 +2245,13 @@ readonly POST_REBOOT_SCRIPT_HOOK="[ -x $ScriptFilePath ] && $POST_REBOOT_SCRIPT_
 readonly POST_UPDATE_EMAIL_SCRIPT_JOB="$ScriptFilePath postUpdateEmail &"
 readonly POST_UPDATE_EMAIL_SCRIPT_HOOK="[ -x $ScriptFilePath ] && $POST_UPDATE_EMAIL_SCRIPT_JOB $hookScriptTagStr"
 
-##------------------------------------------##
-## Modified by ExtremeFiretop [2026-Jun-10] ##
-##------------------------------------------##
+##----------------------------------------##
+## Modified by Martinski W. [2026-Jun-23] ##
+##----------------------------------------##
 _CleanUpOldLogFiles_()
 {
-    [ ! -d "$FW_LOG_DIR" ] && return 1
-    local numLogFiles  topLogFile  savedTopLogFile=""
+    [ ! -d "$FW_LOG_DIR" ] && return 0
+    local retCode  numLogFiles  topLogFile  savedTopLogFile=""
 
     numLogFiles="$(ls -1lt "$FW_LOG_DIR"/*.log 2>/dev/null | wc -l)"
     # Leave one log file (if any available) #
@@ -2271,6 +2271,7 @@ _CleanUpOldLogFiles_()
 
     # Delete logs older than 30 days #
     /usr/bin/find -L "$FW_LOG_DIR" -name '*.log' -mtime +30 -exec rm {} \;
+    retCode="$?"
 
     # Restore the most recent log file #
     if [ -n "$topLogFile" ] && \
@@ -2282,7 +2283,7 @@ _CleanUpOldLogFiles_()
             return 1
         fi
     fi
-    return 0
+    return "$retCode"
 }
 
 ##----------------------------------------##
