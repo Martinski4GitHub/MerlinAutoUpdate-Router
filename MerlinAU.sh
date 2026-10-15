@@ -16,7 +16,7 @@
 # MerlinAU™ and MerlinAutoUpdate™ are project trademarks.
 # The GPLv3 license does not grant trademark rights. See TRADEMARKS.md.
 ##############################################################################
-# amtm NoMD5check
+
 set -u
 
 ## Set version for each Production Release ##
@@ -371,13 +371,13 @@ _UserLogMsg_()
    fi
 }
 
-##-------------------------------------##
-## Added by Martinski W. [2026-Feb-22] ##
-##-------------------------------------##
+##------------------------------------------##
+## Modified by ExtremeFiretop [2026-Oct-05] ##
+##------------------------------------------##
 DoPrintf()
 {
     if "$isInteractive" && "$isVerbose"
-    then printf "$1"
+    then printf "$@"
     fi
 }
 
@@ -3166,7 +3166,9 @@ _GetRemoteMinSupportedFirmwareVers_()
    tmpScript="/tmp/${SCRIPT_NAME}.sh.minfw.tmp"
    if [ "$SCRIPT_BRANCH" = "master" ] && [ -n "$DLRepoVersion" ]
    then
-        srceScriptUrl="${RELEASE_URL_BASE}/${DLRepoVersion}/${RELEASE_UPDATE_ASSET}"
+        # Inspect the version-pinned repository source rather than the counted
+        # update asset so this compatibility check does not inflate update metrics.
+        srceScriptUrl="${SCRIPT_URL_BASE}/${DLRepoVersion}/${SCRIPT_NAME}.sh"
    else
         srceScriptUrl="${SCRIPT_URL_REPO}/${SCRIPT_NAME}.sh"
    fi
@@ -6260,11 +6262,13 @@ _DownloadForMerlin_()
     fi
 }
 
-##---------------------------------------##
-## Added by ExtremeFiretop [2024-Apr-18] ##
-##---------------------------------------##
+##------------------------------------------##
+## Modified by ExtremeFiretop [2026-Oct-05] ##
+##------------------------------------------##
 _UnzipMerlin_()
 {
+    unzipOutputFile="${TEMP_DIR}/MerlinAU_unzip_$$.log"
+
     Say "-----------------------------------------------------------"
     # List & log the contents of the ZIP file
     unzip -l "$FW_ZIP_FPATH" 2>&1 | \
@@ -6272,8 +6276,17 @@ _UnzipMerlin_()
     Say "-----------------------------------------------------------"
 
     # Extracting the firmware binary image
-    if unzip -o "$FW_ZIP_FPATH" -d "$FW_BIN_DIR" -x README* 2>&1 | \
-       while IFS= read -r line ; do Say "$line" ; done
+    unzip -o "$FW_ZIP_FPATH" -d "$FW_BIN_DIR" -x README* > "$unzipOutputFile" 2>&1
+    unzipStatus=$?
+
+    while IFS= read -r line
+    do
+        Say "$line"
+    done < "$unzipOutputFile"
+
+    rm -f "$unzipOutputFile"
+
+    if [ "$unzipStatus" -eq 0 ]
     then
         Say "-----------------------------------------------------------"
         #---------------------------------------------------------------#
@@ -11201,7 +11214,12 @@ _DoInstallation_()
    _InitHelperJSFile_
    _SetVersionSharedSettings_ local "$SCRIPT_VERSION"
    _SetVersionSharedSettings_ server "$SCRIPT_VERSION"
-   _DownloadScriptFiles_ install
+   if ! _DownloadScriptFiles_ install
+   then
+       Say "${REDct}**ERROR**${NOct}: Unable to download all required $SCRIPT_NAME installation files."
+       Say "Installation aborted."
+       _DoExit_ 1
+   fi
    _CheckAndSetBackupOption_
    _SetDefaultBuildType_
 
